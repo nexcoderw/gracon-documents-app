@@ -77,8 +77,8 @@ This application lets users create, organize, edit, share, sign, verify, and rev
 - Signed, finalised, and locked editor immutability is centralized in `src/lib/document-readonly.ts` with regression coverage so future editor changes cannot accidentally re-enable editing
 - Owner lock is a confirmed action, not an accidental one-click mutation
 - Signed and locked documents render signing evidence in editor and print preview, with QR verification centered at the bottom of the signed page surface
-- Print preview now uses an isolated read-only `tiptap-pagination-plus` renderer with the stable Gracon-owned canvas/export fallback still available when pagination fails or times out
-- Print preview owns a cleanup audit for hidden paginated export roots: temporary export hosts, readiness timers, and DOM refs must be cleared when saving finishes or the preview unmounts
+- Print preview now uses the stable Gracon-owned canvas/export path; third-party runtime pagination has been removed while Gracon-owned pagination is implemented
+- Print preview owns a cleanup audit for stale export roots: temporary export hosts, readiness timers, and DOM refs must be cleared when saving finishes or the preview unmounts
 - Gracon-owned page break and pagination architecture is documented in `docs/gracon-owned-pagination-architecture.md`
 - Cross-tab share activity refresh and document metadata merge patterns
 - Typed insert-menu action registry so menu labels, enabled states, and editor command dispatch stay aligned while features are implemented incrementally
@@ -170,9 +170,9 @@ Read that guide before changing the editor, document canvas, page setup, rulers,
 - Document comments are styled through `DocumentCommentsPanel.module.css`; do not add new `doc-comments` globals.
 - Signing progress is styled through `DocumentSigningProgressPanel.module.css`; keep it independent from document canvas geometry.
 - Print preview shell styling is scoped through `DocumentPrintPreviewDialog.module.css`; keep modal chrome out of `globals.css`.
-- Pagination must remain Gracon-owned in the live editor and persisted document model. Third-party pagination is allowed only inside `DocumentPrintPreviewDialog` through the isolated read-only renderer, and that path must keep cleanup, timeout, and Gracon-canvas fallback behavior.
+- Pagination must remain Gracon-owned in the live editor, print preview, and persisted document model. Third-party pagination packages may be studied externally, but should not be reintroduced into runtime dependencies.
 - Hidden print-preview/export renderers must be treated as short-lived resources. Any new async render path must cancel timers, ignore callbacks after unmount, remove temporary DOM hosts, and keep object refs from pointing at detached nodes.
-- Print preview should not mount hidden editors for export. Export from the visible isolated preview renderer when it is ready; otherwise fall back to the visible Gracon canvas.
+- Print preview should not mount hidden editors for export. Export from the visible Gracon canvas unless a future worker or server renderer replaces it.
 - Autosave skips unchanged TipTap JSON payloads so long documents do not repeatedly upload identical content.
 - Comment loading is intentionally bounded and cursor-paginated; the comments drawer loads older review history only on demand.
 
