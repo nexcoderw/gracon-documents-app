@@ -17,8 +17,8 @@ Purpose: preserve the document editor, page geometry, ruler behavior, print prev
 ## Print Preview And Export
 
 - The live editor must stay Gracon-owned; do not attach third-party pagination to editable editor surfaces.
-- Print preview may mount the isolated `DocumentPaginatedPrintPreviewRenderer` with `tiptap-pagination-plus` because it is read-only, short-lived, and guarded by fallback cleanup.
-- The stable Gracon-owned canvas/export fallback must remain available whenever preview pagination fails or times out.
+- Print preview should use the stable Gracon-owned canvas/export path.
+- Do not reintroduce runtime third-party pagination packages.
 - Hidden preview/export renderers must clean up temporary DOM hosts, timers, refs, and callbacks after unmount.
 - Print preview should not mount a hidden second editor just to prepare PDF export.
 
