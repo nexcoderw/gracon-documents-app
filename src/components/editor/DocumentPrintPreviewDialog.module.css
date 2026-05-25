@@ -57,22 +57,71 @@
   cursor: pointer;
 }
 
-.ghostButton {
-  border-color: rgba(255, 255, 255, 0.34);
-  background: rgba(255, 255, 255, 0.10);
-  color: #ffffff;
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
-.ghostButton:hover,
-.ghostButton:focus-visible {
-  border-color: rgba(255, 255, 255, 0.58);
-  background: rgba(255, 255, 255, 0.18);
+.secondaryButton {
+  min-width: 82px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  font-weight: 750;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.secondaryButton:hover,
+.secondaryButton:focus-visible {
+  border-color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.20);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 12px 26px rgba(0, 0, 0, 0.24);
+  transform: translateY(-1px);
+}
+
+.secondaryButton:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.secondaryButton:disabled,
+.secondaryButton:disabled:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  transform: none;
 }
 
 .body {
+  position: relative;
   min-height: 0;
   overflow: auto;
+}
+
+.previewStatus {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(16, 18, 26, 0.82);
+  color: #ffffff;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .preview :global(.ded-canvas) {
@@ -132,6 +181,10 @@
     display: none !important;
   }
 
+  :global(body.document-print-preview-active) .previewStatus {
+    display: none !important;
+  }
+
   :global(body.document-print-preview-active) .body,
   :global(body.document-print-preview-active) .preview :global(.ded-canvas),
   :global(body.document-print-preview-active) .preview :global(.document-workspace-stage) {
@@ -151,5 +204,10 @@
   :global(body.document-print-preview-active) .preview :global(.document-layout-frame) {
     transform: none !important;
     transform-origin: top left !important;
+  }
+
+  :global(body.document-print-preview-active) .preview [data-document-paginated-export-root="true"] {
+    transform: none !important;
+    box-shadow: none !important;
   }
 }
