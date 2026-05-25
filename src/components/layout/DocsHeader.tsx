@@ -221,6 +221,8 @@ export function DocsHeader({ user }: { user: SessionUser }) {
                                 <a
                                     className="docs-header__account-item"
                                     href={profileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     role="menuitem"
                                     onClick={() => setAvatarMenuOpen(false)}
                                 >
@@ -230,6 +232,8 @@ export function DocsHeader({ user }: { user: SessionUser }) {
                                 <a
                                     className="docs-header__account-item"
                                     href={settingsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     role="menuitem"
                                     onClick={() => setAvatarMenuOpen(false)}
                                 >
