@@ -166,7 +166,7 @@ export function DocumentPaginatedPrintPreviewRenderer({
                 pageHeight: A4_PAPER_HEIGHT_PX,
                 pageWidth: A4_PAPER_WIDTH_PX,
                 pageGap: PAPER_PAGE_GAP_PX,
-                pageBreakBackground: '#e8ebf0',
+                pageBreakBackground: '#ffffff',
                 pageGapBorderSize: 0,
                 pageGapBorderColor: 'transparent',
                 marginTop: layout.margins.top,
