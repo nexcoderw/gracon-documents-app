@@ -47,7 +47,7 @@ import {
     type TiptapOutlineMetric,
 } from '@/lib/tiptap/tiptap-page-metrics';
 import { applyTiptapPageLayoutOffsets } from '@/lib/tiptap/tiptap-page-breaks';
-import { createTiptapPageGeometry } from '@/lib/tiptap/tiptap-page-geometry';
+import { createTiptapLivePageGeometry } from '@/lib/tiptap/tiptap-page-geometry';
 import {
     hasDocumentPermission,
     isDocumentBaseReadOnly,
@@ -206,9 +206,8 @@ export default function EditDocumentPage() {
         const editorEl = canvasRef.current?.querySelector<HTMLElement>('.ProseMirror');
         if (!editorEl) return;
 
-        const pageGeometry = createTiptapPageGeometry({
+        const pageGeometry = createTiptapLivePageGeometry({
             pageHeight: A4_PAPER_HEIGHT_PX,
-            pageGap: PAPER_PAGE_GAP_PX,
             margins: documentLayout.margins,
         });
         applyTiptapPageLayoutOffsets(editorEl, pageGeometry);
