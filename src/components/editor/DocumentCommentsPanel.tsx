@@ -130,10 +130,7 @@ function CommentCard({
         <article className={cx(styles.card, isResolved && styles.resolvedCard, active && styles.activeCard)}>
             <div className={styles.cardHead}>
                 <div className={styles.avatar} aria-hidden="true">
-                    {comment.author.imageUrl
-                        ? <img className={styles.avatarImage} src={comment.author.imageUrl} alt={getInitials(comment)} />
-                        : <span className={styles.avatarText}>{getInitials(comment)}</span>
-                    }
+                    <span className={styles.avatarText}>{getInitials(comment)}</span>
                 </div>
                 <div className={styles.identity}>
                     <p className={styles.identityName}>{comment.author.displayName}</p>
