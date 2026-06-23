@@ -42,6 +42,7 @@ function getFrameClassName(showFormattingMarks: boolean) {
 function createPageSurfaces(
     pageCount: number,
     pageHeight: number,
+    pageGap: number,
     title: string,
     status: string,
     headerFooter: DocumentHeaderFooter,
@@ -57,7 +58,7 @@ function createPageSurfaces(
                 key={pageNumber}
                 className="document-page-surface"
                 style={{
-                    top: pageNumber === 1 ? 0 : (pageNumber - 1) * pageHeight,
+                    top: (pageNumber - 1) * (pageHeight + pageGap),
                     height: pageHeight,
                 }}
                 aria-hidden="true"
@@ -95,6 +96,7 @@ export function PagedDocumentCanvas({
     zoomScale,
     pageCount,
     pageHeight,
+    pageGap = 0,
     contentHeight,
     showFormattingMarks,
     paperStyle,
@@ -104,7 +106,9 @@ export function PagedDocumentCanvas({
     onContentChange,
     onEditorReady,
 }: PagedDocumentCanvasProps) {
-    const continuousMinHeight = Math.max(pageHeight, contentHeight, pageCount * pageHeight);
+    const safePageGap = Math.max(0, pageGap);
+    const pageStackHeight = (pageCount * pageHeight) + (Math.max(0, pageCount - 1) * safePageGap);
+    const continuousMinHeight = Math.max(pageHeight, contentHeight, pageStackHeight);
     const scaledFrameWidth = Math.round(A4_PAPER_WIDTH_PX * zoomScale);
     const scaledFrameHeight = continuousMinHeight * zoomScale;
     const headerText = headerFooter.headerText || title;
@@ -129,17 +133,17 @@ export function PagedDocumentCanvas({
                         data-document-page-numbers-enabled={String(headerFooter.pageNumbersEnabled)}
                         data-document-header-text={headerText}
                         data-document-footer-text={footerText}
-                        data-document-page-gap="0"
+                        data-document-page-gap={safePageGap}
                         style={{
                             minHeight: continuousMinHeight,
-                            ['--document-page-gap' as string]: '0px',
+                            ['--document-page-gap' as string]: `${safePageGap}px`,
                             ['--ded-tiptap-min-height' as string]: `${pageHeight}px`,
                             transform: `scale(${zoomScale})`,
                             transformOrigin: 'top center',
                         }}
                     >
                         <div className="document-page-surfaces">
-                            {createPageSurfaces(pageCount, pageHeight, title, status, headerFooter)}
+                            {createPageSurfaces(pageCount, pageHeight, safePageGap, title, status, headerFooter)}
                         </div>
                         <RichTextEditor
                             key={documentId}
