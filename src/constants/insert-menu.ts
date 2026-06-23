@@ -17,6 +17,7 @@ export const INSERT_ACTION_IDS = {
     dateTime: 'insert:date-time',
     link: 'insert:link',
     comment: 'insert:comment',
+    tableOfContents: 'insert:table-of-contents',
     emoji: 'insert:emoji',
     specialCharacters: 'insert:special',
     emDash: 'insert:special:em-dash',
@@ -92,6 +93,11 @@ export const INSERT_ACTIONS = {
         label: 'Comment',
         status: 'ready',
     },
+    tableOfContents: {
+        actionId: INSERT_ACTION_IDS.tableOfContents,
+        label: 'Table of contents',
+        status: 'ready',
+    },
     emoji: {
         actionId: INSERT_ACTION_IDS.emoji,
         label: 'Emoji',
@@ -141,8 +147,7 @@ export const INSERT_ACTIONS = {
     footnote: {
         actionId: INSERT_ACTION_IDS.footnote,
         label: 'Footnote',
-        disabled: true,
-        status: 'planned',
+        status: 'ready',
     },
     headerFooter: {
         actionId: INSERT_ACTION_IDS.headerFooter,
@@ -183,6 +188,7 @@ export const INSERT_MENU_ITEMS: MenuItem[] = [
     { type: 'divider' },
     createInsertAction(INSERT_ACTIONS.link),
     createInsertAction(INSERT_ACTIONS.comment),
+    createInsertAction(INSERT_ACTIONS.tableOfContents),
     { type: 'divider' },
     createInsertAction(INSERT_ACTIONS.emoji),
     {
