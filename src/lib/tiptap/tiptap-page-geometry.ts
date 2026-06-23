@@ -20,6 +20,7 @@ export interface TiptapPageMargins {
 
 export interface TiptapPageGeometryInput {
     pageHeight?: number;
+    pageGap?: number;
     headerHeight?: number;
     footerHeight?: number;
     margins?: Partial<TiptapPageMargins>;
@@ -27,6 +28,8 @@ export interface TiptapPageGeometryInput {
 
 export interface TiptapPageGeometry {
     pageHeight: number;
+    pageGap: number;
+    pagePitch: number;
     headerHeight: number;
     footerHeight: number;
     margins: TiptapPageMargins;
@@ -66,6 +69,7 @@ function normalizeMargins(value: Partial<TiptapPageMargins> | undefined): Tiptap
  */
 export function createTiptapPageGeometry(input: TiptapPageGeometryInput = {}): TiptapPageGeometry {
     const pageHeight = Math.max(1, normalizePositiveNumber(input.pageHeight, A4_PAPER_HEIGHT_PX));
+    const pageGap = normalizePositiveNumber(input.pageGap, 0);
     const headerHeight = normalizePositiveNumber(input.headerHeight, PAPER_HEADER_HEIGHT_PX);
     const footerHeight = normalizePositiveNumber(input.footerHeight, PAPER_FOOTER_HEIGHT_PX);
     const margins = normalizeMargins(input.margins);
@@ -74,6 +78,8 @@ export function createTiptapPageGeometry(input: TiptapPageGeometryInput = {}): T
 
     return {
         pageHeight,
+        pageGap,
+        pagePitch: pageHeight + pageGap,
         headerHeight,
         footerHeight,
         margins,
@@ -94,8 +100,8 @@ export function getTiptapPageRegionAt(
     geometry: TiptapPageGeometry,
     top: number,
 ): TiptapPageRegion {
-    const pageIndex = Math.max(0, Math.floor(Math.max(0, top) / geometry.pageHeight));
-    const pageTop = pageIndex * geometry.pageHeight;
+    const pageIndex = Math.max(0, Math.floor(Math.max(0, top) / geometry.pagePitch));
+    const pageTop = pageIndex * geometry.pagePitch;
     const pageBottom = pageTop + geometry.pageHeight;
 
     return {
@@ -128,7 +134,7 @@ export function calculateTiptapPageBlockOffset(
     const crossesFooter = blockBottom > current.printableBottom;
 
     if (forceNextPage) {
-        const nextPrintableTop = current.pageTop + geometry.pageHeight + geometry.printableTop;
+        const nextPrintableTop = current.pageTop + geometry.pagePitch + geometry.printableTop;
         return Math.max(0, Math.ceil(nextPrintableTop - blockTop));
     }
 
@@ -137,9 +143,44 @@ export function calculateTiptapPageBlockOffset(
     }
 
     if (crossesFooter && blockHeight <= geometry.printableHeight) {
-        const nextPrintableTop = current.pageTop + geometry.pageHeight + geometry.printableTop;
+        const nextPrintableTop = current.pageTop + geometry.pagePitch + geometry.printableTop;
         return Math.max(0, Math.ceil(nextPrintableTop - blockTop));
     }
 
     return 0;
+}
+
+/**
+ * Returns whether a block is too tall to move as one whole printable block.
+ *
+ * @param geometry - Normalized page geometry.
+ * @param blockHeight - Rendered block height in CSS pixels.
+ * @returns Whether the block needs future line-level pagination.
+ */
+export function isTiptapPageBlockOversized(
+    geometry: TiptapPageGeometry,
+    blockHeight: number,
+) {
+    return Math.max(0, blockHeight) > geometry.printableHeight;
+}
+
+/**
+ * Returns whether an oversized block currently crosses the printable footer zone.
+ *
+ * @param geometry - Normalized page geometry.
+ * @param blockTop - Block top relative to the document root.
+ * @param blockHeight - Rendered block height in CSS pixels.
+ * @returns Whether the block should be flagged for future line pagination.
+ */
+export function isTiptapPageBlockOverflowing(
+    geometry: TiptapPageGeometry,
+    blockTop: number,
+    blockHeight: number,
+) {
+    if (!isTiptapPageBlockOversized(geometry, blockHeight)) {
+        return false;
+    }
+
+    const region = getTiptapPageRegionAt(geometry, blockTop);
+    return blockTop + Math.max(0, blockHeight) > region.printableBottom;
 }
