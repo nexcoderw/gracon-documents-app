@@ -89,8 +89,7 @@ export const INSERT_ACTIONS = {
     comment: {
         actionId: INSERT_ACTION_IDS.comment,
         label: 'Comment',
-        disabled: true,
-        status: 'planned',
+        status: 'ready',
     },
     emoji: {
         actionId: INSERT_ACTION_IDS.emoji,
