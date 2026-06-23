@@ -38,7 +38,7 @@ import { SigningModal } from '@/components/documents/SigningModal';
 import { DocumentSignatureBlock } from '@/components/documents/DocumentSignatureBlock';
 import type { SigningActionStatus } from '@/components/editor/DocEditorSignatureAction';
 import { buildViewMenuItems } from '@/constants/view-menu';
-import { A4_PAPER_HEIGHT_PX, A4_PAPER_WIDTH_PX } from '@/constants';
+import { A4_PAPER_HEIGHT_PX, A4_PAPER_WIDTH_PX, PAPER_PAGE_GAP_PX } from '@/constants';
 import { useStarred } from '@/lib/hooks/useStarred';
 import { useDocumentTitle } from '@/lib/hooks/useDocumentTitle';
 import {
@@ -147,7 +147,12 @@ export default function EditDocumentPage() {
         pageCount: paginationMetrics.pageCount,
         activePage: paginationMetrics.activePage,
         pageHeight: A4_PAPER_HEIGHT_PX,
-        contentHeight: Math.max(A4_PAPER_HEIGHT_PX, paginationMetrics.pageCount * A4_PAPER_HEIGHT_PX),
+        pageGap: PAPER_PAGE_GAP_PX,
+        contentHeight: Math.max(
+            A4_PAPER_HEIGHT_PX,
+            (paginationMetrics.pageCount * A4_PAPER_HEIGHT_PX) +
+                (Math.max(0, paginationMetrics.pageCount - 1) * PAPER_PAGE_GAP_PX),
+        ),
         pages: paginationMetrics.pages,
     }), [paginationMetrics]);
     const pageRootRef = useRef<HTMLDivElement>(null);
@@ -203,12 +208,13 @@ export default function EditDocumentPage() {
 
         const pageGeometry = createTiptapPageGeometry({
             pageHeight: A4_PAPER_HEIGHT_PX,
+            pageGap: PAPER_PAGE_GAP_PX,
             margins: documentLayout.margins,
         });
         applyTiptapPageLayoutOffsets(editorEl, pageGeometry);
         setPaginationMetrics(measureTiptapPagination(editorEl, {
             pageHeight: A4_PAPER_HEIGHT_PX,
-            pageGap: 0,
+            pageGap: PAPER_PAGE_GAP_PX,
             contentHeight: pageGeometry.printableBottom,
         }));
     }, [documentLayout.margins]);
@@ -1196,6 +1202,7 @@ export default function EditDocumentPage() {
                         zoomScale={zoomScale}
                         pageCount={continuousDocumentLayout.pageCount}
                         pageHeight={continuousDocumentLayout.pageHeight}
+                        pageGap={continuousDocumentLayout.pageGap}
                         contentHeight={continuousDocumentLayout.contentHeight}
                         printLayout={viewState.printLayout}
                         showFormattingMarks={viewState.showFormattingMarks}
