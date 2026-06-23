@@ -59,6 +59,34 @@ zero so generated PDF pages remain exact A4 slices. Oversized blocks that cannot
 fit within one printable region should be flagged as render-only overflow
 instead of being split or mutated by DOM code.
 
+## Visual QA Rules
+
+Pagination changes must be checked against the live editor canvas, print
+preview, and export capture path before they are considered complete. The
+primary visual contract is that editable text never renders through the
+repeated page header, footer, page number, or gray inter-page gap.
+
+Manual page breaks are the strongest page movement signal. A block with
+`pageBreakBefore` must start at the next printable page region even when prior
+automatic offsets already changed the effective document coordinate. Oversized
+blocks should stay in document order and show the render-only overflow marker
+until line-level pagination is implemented.
+
+The minimum QA pass for page-seam work is:
+
+1. Open a long document in the live editor and inspect the first two page seams.
+2. Confirm headings, paragraphs, lists, and page-break-before blocks start
+   below the header chrome and stop above the footer chrome when they can fit
+   within one printable region.
+3. Confirm oversized paragraphs are not force-split by DOM code and display the
+   overflow marker only when they exceed the printable region.
+4. Toggle formatting marks and confirm page-break indicators do not change text
+   flow or overlap the page header/footer.
+5. Open print preview and confirm repeated page chrome matches the live editor
+   without carrying the live gray page gap into exported page slices.
+6. Check at least desktop and narrow laptop widths because ruler/outline
+   presence changes the available canvas scroll area.
+
 ## Future Page-Break Rules
 
 Manual page breaks are represented in the editor schema, not as unmanaged DOM
