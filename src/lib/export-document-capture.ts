@@ -12,8 +12,9 @@ import {
     A4_PAPER_WIDTH_PX,
 } from '@/constants/document-paper';
 import { DEFAULT_DOCUMENT_LAYOUT, readDocumentLayoutFromElement } from '@/lib/document-layout';
+import type { DocumentLayoutMargins } from '@/lib/document-layout';
 import { createPaperExportGeometry } from '@/lib/document-layout-export-parity';
-import { applyTiptapPageBreakOffsets } from '@/lib/tiptap/tiptap-page-breaks';
+import { applyTiptapPageLayoutOffsets } from '@/lib/tiptap/tiptap-page-breaks';
 
 async function waitForRenderableAssets(rootEl: HTMLElement) {
     if ('fonts' in document) {
@@ -69,10 +70,16 @@ function getPageCount(frameEl: HTMLElement) {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
-function getContinuousExportPageCount(frameEl: HTMLElement) {
+function getContinuousExportPageCount(
+    frameEl: HTMLElement,
+    margins: DocumentLayoutMargins = DEFAULT_DOCUMENT_LAYOUT.margins,
+) {
     const editorEl = frameEl.querySelector('.ProseMirror');
     if (editorEl instanceof HTMLElement) {
-        applyTiptapPageBreakOffsets(editorEl, A4_PAPER_HEIGHT_PX);
+        applyTiptapPageLayoutOffsets(editorEl, {
+            pageHeight: A4_PAPER_HEIGHT_PX,
+            margins,
+        });
     }
     const contentHeight = Math.max(
         frameEl.scrollHeight,
@@ -125,7 +132,11 @@ function ensurePageSurfaces(frameEl: HTMLElement, pageCount: number) {
     frameEl.prepend(surfacesEl);
 }
 
-function prepareExportFrame(frameEl: HTMLElement, pageCount: number) {
+function prepareExportFrame(
+    frameEl: HTMLElement,
+    pageCount: number,
+    margins: DocumentLayoutMargins = DEFAULT_DOCUMENT_LAYOUT.margins,
+) {
     frameEl.classList.remove('document-layout-frame--web-layout', 'document-layout-frame--show-marks');
     frameEl.classList.add('document-layout-frame--paged');
     frameEl.style.setProperty('--document-page-gap', '0px');
@@ -140,7 +151,10 @@ function prepareExportFrame(frameEl: HTMLElement, pageCount: number) {
     });
     const editorEl = frameEl.querySelector('.ProseMirror');
     if (editorEl instanceof HTMLElement) {
-        applyTiptapPageBreakOffsets(editorEl, A4_PAPER_HEIGHT_PX);
+        applyTiptapPageLayoutOffsets(editorEl, {
+            pageHeight: A4_PAPER_HEIGHT_PX,
+            margins,
+        });
     }
 }
 
@@ -169,10 +183,10 @@ function createExportSheet(sourceEl: HTMLElement) {
     hostEl.appendChild(frameEl);
     document.body.appendChild(hostEl);
 
-    pageCount = getContinuousExportPageCount(frameEl);
+    pageCount = getContinuousExportPageCount(frameEl, sourceLayout.margins);
     frameEl.dataset.documentPageCount = String(pageCount);
     ensurePageSurfaces(frameEl, pageCount);
-    prepareExportFrame(frameEl, pageCount);
+    prepareExportFrame(frameEl, pageCount, sourceLayout.margins);
 
     return {
         frameEl,
@@ -208,7 +222,7 @@ async function renderExportSheet(
             if (!clonedFrame) return;
 
             applyExportPaperGeometry(clonedFrame, margins);
-            prepareExportFrame(clonedFrame, pageCount);
+            prepareExportFrame(clonedFrame, pageCount, margins);
         },
     });
 }
