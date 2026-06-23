@@ -9,12 +9,14 @@
 import {
     calculateTiptapPageBlockOffset,
     createTiptapPageGeometry,
+    isTiptapPageBlockOverflowing,
     type TiptapPageGeometryInput,
 } from '@/lib/tiptap/tiptap-page-geometry';
 
 const PAGE_BREAK_BEFORE_SELECTOR = '[data-page-break-before="true"]';
 const PAGE_BREAK_OFFSET_VAR = '--document-page-break-before-offset';
 const PAGE_AUTO_OFFSET_VAR = '--document-page-auto-offset';
+const PAGE_OVERFLOW_ATTR = 'data-document-page-overflow';
 const PAGE_LAYOUT_BLOCK_SELECTOR = [
     ':scope > p',
     ':scope > h1',
@@ -36,6 +38,7 @@ const PAGE_LAYOUT_BLOCK_SELECTOR = [
 export interface TiptapPageLayoutOffsetResult {
     manualOffsetCount: number;
     automaticOffsetCount: number;
+    overflowBlockCount: number;
 }
 
 function getRelativeTop(root: HTMLElement, element: HTMLElement) {
@@ -65,6 +68,7 @@ export function clearTiptapPageLayoutOffsets(root: HTMLElement) {
     root.querySelectorAll<HTMLElement>(PAGE_LAYOUT_BLOCK_SELECTOR).forEach((element) => {
         element.style.removeProperty(PAGE_BREAK_OFFSET_VAR);
         element.style.removeProperty(PAGE_AUTO_OFFSET_VAR);
+        element.removeAttribute(PAGE_OVERFLOW_ATTR);
     });
 }
 
@@ -96,18 +100,25 @@ export function applyTiptapPageLayoutOffsets(
     const blocks = Array.from(root.querySelectorAll<HTMLElement>(PAGE_LAYOUT_BLOCK_SELECTOR));
     let manualOffsetCount = 0;
     let automaticOffsetCount = 0;
+    let overflowBlockCount = 0;
 
     clearTiptapPageLayoutOffsets(root);
 
     if (blocks.length === 0 || geometry.pageHeight <= 0 || geometry.printableHeight <= 0) {
-        return { manualOffsetCount, automaticOffsetCount };
+        return { manualOffsetCount, automaticOffsetCount, overflowBlockCount };
     }
 
     blocks.forEach((block) => {
         const manualBreak = block.getAttribute('data-page-break-before') === 'true';
         const top = getRelativeTop(root, block);
         const height = block.getBoundingClientRect().height;
+        const overflowing = isTiptapPageBlockOverflowing(geometry, top, height);
         const offset = calculateTiptapPageBlockOffset(geometry, top, height, manualBreak);
+
+        if (overflowing) {
+            block.setAttribute(PAGE_OVERFLOW_ATTR, 'true');
+            overflowBlockCount += 1;
+        }
 
         if (offset <= 0) {
             return;
@@ -122,5 +133,5 @@ export function applyTiptapPageLayoutOffsets(
         }
     });
 
-    return { manualOffsetCount, automaticOffsetCount };
+    return { manualOffsetCount, automaticOffsetCount, overflowBlockCount };
 }
