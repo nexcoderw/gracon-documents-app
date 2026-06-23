@@ -159,6 +159,12 @@ Project-local AI guidance lives in `agents/README.md`.
 
 Read that guide before changing the editor, document canvas, page setup, rulers, print preview, export, import, invitations, signing, locking, session handoff, or public verification surfaces. The guide is intentionally specific to this frontend so contributors preserve document geometry, signed-document immutability, Gracon-owned pagination/export work, and the identity handoff boundary with `app/app`.
 
+## Security Hardening
+
+Read [SECURITY.md](./SECURITY.md) before changing session handoff, invitation
+acceptance, signing, profile images, editor image handling, public verification,
+or same-origin proxy routes.
+
 ## Recent Production Notes
 
 - The default app workspace background is intentionally a soft off-white to reduce glare. Do not reintroduce the old purple radial/grid page background on documents, templates, login, or protected loading screens. Actual document paper and export/print surfaces should remain white for fidelity.
@@ -181,6 +187,7 @@ Read that guide before changing the editor, document canvas, page setup, rulers,
 ```bash
 npm install
 npm run dev
+npm run check:security
 npm run build
 npm run lint
 npm run test
