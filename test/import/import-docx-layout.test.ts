@@ -5,6 +5,7 @@ import {
     annotateImportedDocxHtml,
     collectImportedParagraphLayouts,
     createImportedParagraphLayout,
+    extractFootnoteReferencesFromDocxXml,
     extractParagraphListStylesFromDocxXml,
     extractParagraphPageBreaksFromDocumentXml,
     extractParagraphTabStopsFromDocumentXml,
@@ -233,6 +234,33 @@ describe('DOCX import layout conversion', () => {
             { kind: 'orderedList', style: 'lower-alpha' },
             { kind: 'bulletList', style: 'square' },
             null,
+        ]);
+    });
+
+    it('extracts referenced DOCX footnotes in document order', () => {
+        const documentXml = `
+            <w:document><w:body>
+                <w:p>
+                    <w:r><w:t>First</w:t></w:r>
+                    <w:r><w:footnoteReference w:id="3"/></w:r>
+                </w:p>
+                <w:p>
+                    <w:r><w:t>Second</w:t></w:r>
+                    <w:r><w:footnoteReference w:id="8"/></w:r>
+                </w:p>
+            </w:body></w:document>
+        `;
+        const footnotesXml = `
+            <w:footnotes>
+                <w:footnote w:id="-1"><w:p><w:r><w:t>separator</w:t></w:r></w:p></w:footnote>
+                <w:footnote w:id="8"><w:p><w:r><w:t>Second note &amp; detail</w:t></w:r></w:p></w:footnote>
+                <w:footnote w:id="3"><w:p><w:r><w:t>First note</w:t></w:r></w:p></w:footnote>
+            </w:footnotes>
+        `;
+
+        assert.deepEqual(extractFootnoteReferencesFromDocxXml(documentXml, footnotesXml), [
+            { id: '3', note: 'First note' },
+            { id: '8', note: 'Second note & detail' },
         ]);
     });
 
