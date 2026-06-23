@@ -6,7 +6,9 @@ import {
     collectImportedParagraphLayouts,
     createImportedParagraphLayout,
     extractParagraphListStylesFromDocxXml,
+    extractParagraphPageBreaksFromDocumentXml,
     extractParagraphTabStopsFromDocumentXml,
+    mergeParagraphPageBreaksIntoLayouts,
     mergeParagraphTabStopsIntoLayouts,
     twipToPx,
 } from '../../src/lib/import-docx-layout.ts';
@@ -31,6 +33,7 @@ describe('DOCX import layout conversion', () => {
             leftIndent: 48,
             firstLineIndent: 24,
             tabStops: [],
+            pageBreakBefore: false,
         });
     });
 
@@ -47,6 +50,7 @@ describe('DOCX import layout conversion', () => {
             leftIndent: 72,
             firstLineIndent: -24,
             tabStops: [],
+            pageBreakBefore: false,
         });
     });
 
@@ -102,8 +106,8 @@ describe('DOCX import layout conversion', () => {
         });
 
         assert.deepEqual(layouts, [
-            { leftIndent: 48, firstLineIndent: 0, tabStops: [] },
-            { leftIndent: 0, firstLineIndent: -24, tabStops: [] },
+            { leftIndent: 48, firstLineIndent: 0, tabStops: [], pageBreakBefore: false },
+            { leftIndent: 0, firstLineIndent: -24, tabStops: [], pageBreakBefore: false },
         ]);
     });
 
@@ -151,8 +155,8 @@ describe('DOCX import layout conversion', () => {
     it('merges raw DOCX tab stops into Mammoth paragraph layouts by paragraph order', () => {
         const layouts = mergeParagraphTabStopsIntoLayouts(
             [
-                { leftIndent: 48, firstLineIndent: 0, tabStops: [] },
-                { leftIndent: 0, firstLineIndent: -24, tabStops: [] },
+                { leftIndent: 48, firstLineIndent: 0, tabStops: [], pageBreakBefore: false },
+                { leftIndent: 0, firstLineIndent: -24, tabStops: [], pageBreakBefore: false },
             ],
             [
                 [
@@ -171,9 +175,37 @@ describe('DOCX import layout conversion', () => {
                     { position: 48, align: 'left' },
                     { position: 96, align: 'right' },
                 ],
+                pageBreakBefore: false,
             },
-            { leftIndent: 0, firstLineIndent: -24, tabStops: [] },
+            { leftIndent: 0, firstLineIndent: -24, tabStops: [], pageBreakBefore: false },
         ]);
+    });
+
+    it('extracts and merges DOCX paragraph page breaks', () => {
+        const pageBreaks = extractParagraphPageBreaksFromDocumentXml(`
+            <w:document><w:body>
+                <w:p><w:pPr><w:pageBreakBefore/></w:pPr><w:r><w:t>First</w:t></w:r></w:p>
+                <w:p><w:r><w:br w:type="page"/></w:r><w:r><w:t>Second</w:t></w:r></w:p>
+                <w:p><w:r><w:t>Third</w:t></w:r></w:p>
+            </w:body></w:document>
+        `);
+
+        assert.deepEqual(pageBreaks, [true, true, false]);
+        assert.deepEqual(
+            mergeParagraphPageBreaksIntoLayouts(
+                [
+                    { leftIndent: 0, firstLineIndent: 0, tabStops: [], pageBreakBefore: false },
+                    { leftIndent: 24, firstLineIndent: 0, tabStops: [], pageBreakBefore: false },
+                    { leftIndent: 0, firstLineIndent: 0, tabStops: [], pageBreakBefore: false },
+                ],
+                pageBreaks,
+            ),
+            [
+                { leftIndent: 0, firstLineIndent: 0, tabStops: [], pageBreakBefore: true },
+                { leftIndent: 24, firstLineIndent: 0, tabStops: [], pageBreakBefore: true },
+                { leftIndent: 0, firstLineIndent: 0, tabStops: [], pageBreakBefore: false },
+            ],
+        );
     });
 
     it('extracts DOCX numbering formats for imported list styles', () => {
@@ -252,7 +284,7 @@ describe('DOCX import layout conversion', () => {
 
             const html = annotateImportedDocxHtml(
                 '<ol><li>A</li></ol><ul><li>B</li></ul>',
-                [{ leftIndent: 0, firstLineIndent: 0, tabStops: [] }],
+                [{ leftIndent: 0, firstLineIndent: 0, tabStops: [], pageBreakBefore: false }],
                 [
                     { kind: 'orderedList', style: 'upper-roman' },
                     { kind: 'bulletList', style: 'circle' },
