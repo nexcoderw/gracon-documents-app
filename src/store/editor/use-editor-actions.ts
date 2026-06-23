@@ -69,6 +69,8 @@ interface UseEditorActionsOptions {
     onFindToggle: () => void;
     /** Called when a View menu action is dispatched. */
     onViewAction?: (actionId: string) => void;
+    /** Called when Insert → Comment should open the review composer. */
+    onCreateComment?: () => void;
 }
 
 interface UseEditorActionsReturn {
@@ -107,6 +109,7 @@ export function useEditorActions({
     canPrepareSignatureBlocks = false,
     signatureBlockSigners = [],
     onTitleEditStart, onTitleSave, onFindToggle, onViewAction,
+    onCreateComment,
     onPrepareSignatureBlocks,
 }: UseEditorActionsOptions): UseEditorActionsReturn {
     const router = useRouter();
@@ -406,6 +409,11 @@ export function useEditorActions({
             return;
         }
 
+        if (actionId === INSERT_ACTION_IDS.comment) {
+            onCreateComment?.();
+            return;
+        }
+
         if (actionId === INSERT_ACTION_IDS.signatureBlocks) {
             if (!canPrepareSignatureBlocks) {
                 toast.warning('Only the document owner can prepare signature blocks.');
@@ -474,10 +482,10 @@ export function useEditorActions({
                 break;
         }
     }, [
-        copying, doc.completedSignatures, doc.id, doc.status, doc.title, doc.wordCount,
+        copying, doc.completedSignatures, doc.id, doc.signatureSnapshot, doc.status, doc.title, doc.wordCount,
         editingTitle, editor, importing, isReadOnly,
         canPrepareSignatureBlocks, onPrepareSignatureBlocks, openImageDialog, openLinkDialog,
-        onFindToggle, onTitleEditStart, onTitleSave, onViewAction,
+        onCreateComment, onFindToggle, onTitleEditStart, onTitleSave, onViewAction,
         router, savingAs, signatureBlockSigners, title,
     ]);
 
