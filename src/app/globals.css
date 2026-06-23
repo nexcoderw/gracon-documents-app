@@ -1118,6 +1118,23 @@ body {
   min-width: 0;
   overflow-wrap: break-word;
 }
+.tiptap-editor .ProseMirror [data-page-break-before="true"] {
+  padding-top: var(--document-page-break-before-offset, 0px);
+  break-before: page;
+  page-break-before: always;
+}
+.document-layout-frame--show-marks .tiptap-editor .ProseMirror [data-page-break-before="true"]::before {
+  content: 'Page break';
+  display: block;
+  margin: 0 0 10px;
+  padding: 5px 0;
+  border-top: 1px dashed rgba(91, 35, 245, 0.34);
+  color: rgba(91, 35, 245, 0.62);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 .tiptap-editor .ProseMirror ul,
 .tiptap-editor .ProseMirror ol { padding-left:1.5em; margin:0.5em 0; }
 .tiptap-editor .ProseMirror ul[data-list-style-type="disc"] { list-style-type: disc; }
