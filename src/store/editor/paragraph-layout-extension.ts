@@ -41,12 +41,20 @@ declare module '@tiptap/core' {
              * Applies paragraph line height to selected paragraphs/headings.
              */
             setParagraphLineHeight: (lineHeight: number | null) => ReturnType;
+            /**
+             * Toggles whether selected paragraphs/headings start on a new page.
+             */
+            toggleParagraphPageBreakBefore: () => ReturnType;
         };
     }
 }
 
 function normalizeIndent(value: unknown) {
     return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : 0;
+}
+
+function normalizePageBreakBefore(value: unknown) {
+    return value === true || value === 'true';
 }
 
 function parseIndentFromStyle(styleValue: string | null) {
@@ -398,6 +406,46 @@ export const ParagraphLayoutExtension = Extension.create({
                     (attrs) => normalizeParagraphLineHeight(attrs.lineHeight) === nextLineHeight,
                 );
             },
+            toggleParagraphPageBreakBefore: () => ({ state, dispatch }) => {
+                let currentValue = false;
+                let foundBlock = false;
+
+                state.doc.nodesBetween(state.selection.from, state.selection.to, (node) => {
+                    if (foundBlock || (node.type.name !== 'paragraph' && node.type.name !== 'heading')) {
+                        return;
+                    }
+
+                    currentValue = normalizePageBreakBefore(node.attrs.pageBreakBefore);
+                    foundBlock = true;
+                });
+
+                if (!foundBlock) {
+                    const { $from } = state.selection;
+
+                    for (let depth = $from.depth; depth >= 0; depth -= 1) {
+                        const node = $from.node(depth);
+
+                        if (node.type.name !== 'paragraph' && node.type.name !== 'heading') {
+                            continue;
+                        }
+
+                        currentValue = normalizePageBreakBefore(node.attrs.pageBreakBefore);
+                        break;
+                    }
+                }
+
+                const nextValue = !currentValue;
+
+                return setSelectedParagraphAttrs(
+                    state,
+                    dispatch,
+                    (attrs) => ({
+                        ...attrs,
+                        pageBreakBefore: nextValue,
+                    }),
+                    (attrs) => normalizePageBreakBefore(attrs.pageBreakBefore) === nextValue,
+                );
+            },
         };
     },
 
@@ -510,6 +558,19 @@ export const ParagraphLayoutExtension = Extension.create({
                             }
 
                             return { 'data-line-height': String(lineHeight) };
+                        },
+                    },
+                    pageBreakBefore: {
+                        default: false,
+                        parseHTML: (element) => normalizePageBreakBefore(
+                            element.getAttribute('data-page-break-before'),
+                        ),
+                        renderHTML: (attributes) => {
+                            if (!normalizePageBreakBefore(attributes.pageBreakBefore)) {
+                                return {};
+                            }
+
+                            return { 'data-page-break-before': 'true' };
                         },
                     },
                 },
