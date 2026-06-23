@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "check:security": "node scripts/check-security-baseline.mjs",
     "test": "node --no-warnings --experimental-strip-types --test --test-concurrency=1 test/verification/*.test.ts test/export/*.test.ts test/import/*.test.ts test/editor/*.test.ts"
   },
   "dependencies": {
