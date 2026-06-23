@@ -19,6 +19,15 @@ test('insert menu does not expose page or section boundaries', () => {
     )));
 });
 
+test('insert menu exposes schema-backed page-break-before action only', () => {
+    assert.equal(INSERT_ACTION_IDS.pageBreakBefore, 'insert:page-break-before');
+    assert.equal(INSERT_ACTIONS.pageBreakBefore.status, 'ready');
+    assert.ok(INSERT_MENU_ITEMS.some((item) => (
+        item.type === 'action' &&
+        item.actionId === INSERT_ACTION_IDS.pageBreakBefore
+    )));
+});
+
 test('insert menu exposes header and footer settings', () => {
     assert.equal(INSERT_ACTIONS.headerFooter.status, 'ready');
     assert.ok(INSERT_MENU_ITEMS.some((item) => (
