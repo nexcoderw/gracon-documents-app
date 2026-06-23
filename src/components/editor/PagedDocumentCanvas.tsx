@@ -34,9 +34,49 @@ interface PagedDocumentCanvasProps {
 function getFrameClassName(showFormattingMarks: boolean) {
     return [
         'document-layout-frame',
-        'document-layout-frame--web-layout',
+        'document-layout-frame--paged',
         showFormattingMarks ? 'document-layout-frame--show-marks' : '',
     ].filter(Boolean).join(' ');
+}
+
+function createPageSurfaces(
+    pageCount: number,
+    pageHeight: number,
+    title: string,
+    status: string,
+    headerFooter: DocumentHeaderFooter,
+) {
+    const headerText = headerFooter.headerText || title;
+    const footerText = headerFooter.footerText || `${status.toLowerCase()} document`;
+
+    return Array.from({ length: Math.max(1, pageCount) }, (_, index) => {
+        const pageNumber = index + 1;
+
+        return (
+            <section
+                key={pageNumber}
+                className="document-page-surface"
+                style={{
+                    top: pageNumber === 1 ? 0 : (pageNumber - 1) * pageHeight,
+                    height: pageHeight,
+                }}
+                aria-hidden="true"
+            >
+                <header className={`document-page-surface__header${headerFooter.headerEnabled ? '' : ' document-page-surface__chrome--hidden'}`}>
+                    <span className="document-page-surface__title">{headerText}</span>
+                    {headerFooter.pageNumbersEnabled && (
+                        <span className="document-page-surface__tag">Page {pageNumber}</span>
+                    )}
+                </header>
+                <footer className={`document-page-surface__footer${headerFooter.footerEnabled ? '' : ' document-page-surface__chrome--hidden'}`}>
+                    <span>{footerText}</span>
+                    {headerFooter.pageNumbersEnabled && (
+                        <span>Page {pageNumber} of {pageCount}</span>
+                    )}
+                </footer>
+            </section>
+        );
+    });
 }
 
 /**
@@ -64,7 +104,7 @@ export function PagedDocumentCanvas({
     onContentChange,
     onEditorReady,
 }: PagedDocumentCanvasProps) {
-    const continuousMinHeight = Math.max(pageHeight, contentHeight);
+    const continuousMinHeight = Math.max(pageHeight, contentHeight, pageCount * pageHeight);
     const scaledFrameWidth = Math.round(A4_PAPER_WIDTH_PX * zoomScale);
     const scaledFrameHeight = continuousMinHeight * zoomScale;
     const headerText = headerFooter.headerText || title;
@@ -93,11 +133,14 @@ export function PagedDocumentCanvas({
                         style={{
                             minHeight: continuousMinHeight,
                             ['--document-page-gap' as string]: '0px',
-                            ['--ded-tiptap-min-height' as string]: `${continuousMinHeight}px`,
+                            ['--ded-tiptap-min-height' as string]: `${pageHeight}px`,
                             transform: `scale(${zoomScale})`,
                             transformOrigin: 'top center',
                         }}
                     >
+                        <div className="document-page-surfaces">
+                            {createPageSurfaces(pageCount, pageHeight, title, status, headerFooter)}
+                        </div>
                         <RichTextEditor
                             key={documentId}
                             initialContent={content}
