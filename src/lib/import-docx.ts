@@ -28,7 +28,9 @@ import {
     annotateImportedDocxHtml,
     collectImportedParagraphLayouts,
     extractParagraphListStylesFromDocxXml,
+    extractParagraphPageBreaksFromDocumentXml,
     extractParagraphTabStopsFromDocumentXml,
+    mergeParagraphPageBreaksIntoLayouts,
     mergeParagraphTabStopsIntoLayouts,
 } from '@/lib/import-docx-layout';
 
@@ -130,6 +132,9 @@ export async function importDocxToTiptap(file: File): Promise<ImportResult> {
     const paragraphTabStops = documentXml
         ? extractParagraphTabStopsFromDocumentXml(documentXml)
         : [];
+    const paragraphPageBreaks = documentXml
+        ? extractParagraphPageBreaksFromDocumentXml(documentXml)
+        : [];
     const paragraphListStyles = documentXml
         ? extractParagraphListStylesFromDocxXml(documentXml, numberingXml)
         : [];
@@ -141,9 +146,12 @@ export async function importDocxToTiptap(file: File): Promise<ImportResult> {
         {
             styleMap: MAMMOTH_STYLE_MAP,
             transformDocument: (document) => {
-                paragraphLayouts = mergeParagraphTabStopsIntoLayouts(
-                    collectImportedParagraphLayouts(document),
-                    paragraphTabStops,
+                paragraphLayouts = mergeParagraphPageBreaksIntoLayouts(
+                    mergeParagraphTabStopsIntoLayouts(
+                        collectImportedParagraphLayouts(document),
+                        paragraphTabStops,
+                    ),
+                    paragraphPageBreaks,
                 );
                 return document;
             },
