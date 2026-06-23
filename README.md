@@ -80,6 +80,9 @@ This application lets users create, organize, edit, share, sign, verify, and rev
 - Print preview now uses the stable Gracon-owned canvas/export path; third-party runtime pagination has been removed while Gracon-owned pagination is implemented
 - Print preview owns a cleanup audit for stale export roots: temporary export hosts, readiness timers, and DOM refs must be cleared when saving finishes or the preview unmounts
 - Gracon-owned page break and pagination architecture is documented in `docs/gracon-owned-pagination-architecture.md`
+- Live editor pagination metrics now derive active page, page count, per-page ruler pages, and heading outline data from the rendered TipTap document without writing measurement state into document JSON
+- The editor includes a collapsible document outline generated from heading positions so long documents can be navigated before schema-backed page breaks are introduced
+- Insert-menu comment creation is wired through the existing comments drawer and selected-text anchors while comment history remains bounded and cursor-paginated
 - Cross-tab share activity refresh and document metadata merge patterns
 - Typed insert-menu action registry so menu labels, enabled states, and editor command dispatch stay aligned while features are implemented incrementally
 - Quick insert actions for date/time and common special characters using undo-safe TipTap insert commands
