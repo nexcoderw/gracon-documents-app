@@ -1,4 +1,20 @@
-/**
+git add "docs/gracon-owned-pagination-architecture.md"
+git commit -m "docs(editor): clarify live and export page geometry"
+
+git add "src/app/(protected)/documents/[id]/edit/page.tsx"
+git commit -m "fix(editor): use live geometry for editor pagination"
+
+git add "src/components/editor/DocumentPrintPreviewDialog.tsx"
+git commit -m "fix(editor): collapse print preview page gap"
+
+git add "src/lib/export-document-capture.ts"
+git commit -m "fix(editor): use export geometry for pdf capture"
+
+git add "src/lib/tiptap/tiptap-page-geometry.ts"
+git commit -m "feat(editor): classify pagination block decisions"
+
+git add "test/editor/tiptap-page-geometry.test.ts"
+git commit -m "test(editor): cover live export geometry contract"/**
  * Shared page geometry helpers for Gracon-owned TipTap pagination.
  */
 import {
@@ -9,6 +25,7 @@ import {
     PAPER_CONTENT_PADDING_TOP_PX,
     PAPER_FOOTER_HEIGHT_PX,
     PAPER_HEADER_HEIGHT_PX,
+    PAPER_PAGE_GAP_PX,
 } from '../../constants/document-paper.ts';
 
 export interface TiptapPageMargins {
@@ -55,6 +72,7 @@ export interface TiptapPageBlockMeasurement {
 export interface TiptapPageBlockOffset {
     offset: number;
     overflow: boolean;
+    mode: 'none' | 'manual-break' | 'automatic-offset' | 'oversized-overflow';
 }
 
 function normalizePositiveNumber(value: unknown, fallback: number) {
@@ -98,6 +116,32 @@ export function createTiptapPageGeometry(input: TiptapPageGeometryInput = {}): T
         printableBottom,
         printableHeight: Math.max(0, printableBottom - printableTop),
     };
+}
+
+/**
+ * Creates page geometry for the live editor surface with visible page gaps.
+ *
+ * @param input - Optional paper, chrome, and margin overrides.
+ * @returns Page geometry using the editor's Google Docs-style page gap.
+ */
+export function createTiptapLivePageGeometry(input: TiptapPageGeometryInput = {}): TiptapPageGeometry {
+    return createTiptapPageGeometry({
+        ...input,
+        pageGap: input.pageGap ?? PAPER_PAGE_GAP_PX,
+    });
+}
+
+/**
+ * Creates page geometry for print/export capture with collapsed page gaps.
+ *
+ * @param input - Optional paper, chrome, and margin overrides.
+ * @returns Page geometry with zero inter-page gap for exact page slicing.
+ */
+export function createTiptapExportPageGeometry(input: TiptapPageGeometryInput = {}): TiptapPageGeometry {
+    return createTiptapPageGeometry({
+        ...input,
+        pageGap: 0,
+    });
 }
 
 /**
@@ -196,6 +240,26 @@ export function isTiptapPageBlockOverflowing(
     return blockTop + Math.max(0, blockHeight) > region.printableBottom;
 }
 
+function getTiptapPageBlockOffsetMode(
+    block: TiptapPageBlockMeasurement,
+    offset: number,
+    overflow: boolean,
+): TiptapPageBlockOffset['mode'] {
+    if (offset > 0 && block.forceNextPage === true) {
+        return 'manual-break';
+    }
+
+    if (offset > 0) {
+        return 'automatic-offset';
+    }
+
+    if (overflow) {
+        return 'oversized-overflow';
+    }
+
+    return 'none';
+}
+
 /**
  * Calculates page offsets for a sequence of blocks using cumulative layout.
  *
@@ -218,9 +282,10 @@ export function calculateTiptapCumulativePageBlockOffsets(
             block.height,
             block.forceNextPage === true,
         );
+        const mode = getTiptapPageBlockOffsetMode(block, offset, overflow);
 
         cumulativeOffset += offset;
 
-        return { offset, overflow };
+        return { offset, overflow, mode };
     });
 }
