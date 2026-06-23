@@ -20,6 +20,7 @@ const DIGITAL_CERTIFICATE_PATH = '/profile/signature';
 const IDENTITY_VERIFICATION_PATH = '/verify-identity';
 const PROFILE_SETTINGS_PATH = '/settings/profile';
 const WORKSPACE_SETTINGS_PATH = '/settings';
+const BLOCKED_NEXT_PATHS = new Set(['/logout', '/login']);
 
 export type SessionRefreshResult =
     | {
@@ -51,7 +52,16 @@ export function normalizeDocsPath(path: string | null | undefined): string {
     if (!path) return DEFAULT_NEXT_PATH;
 
     if (path.startsWith('/')) {
-        return path;
+        try {
+            const parsed = new URL(path, DOCS_URL);
+            if (BLOCKED_NEXT_PATHS.has(parsed.pathname)) {
+                return DEFAULT_NEXT_PATH;
+            }
+
+            return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+        } catch {
+            return DEFAULT_NEXT_PATH;
+        }
     }
 
     try {
@@ -59,6 +69,10 @@ export function normalizeDocsPath(path: string | null | undefined): string {
         const url = new URL(path);
 
         if (url.origin === docsOrigin) {
+            if (BLOCKED_NEXT_PATHS.has(url.pathname)) {
+                return DEFAULT_NEXT_PATH;
+            }
+
             return `${url.pathname}${url.search}${url.hash}`;
         }
     } catch {
