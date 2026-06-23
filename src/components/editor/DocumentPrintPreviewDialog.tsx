@@ -4,7 +4,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { saveRenderedDocumentAs } from '@/lib/export-document';
-import { PAPER_PAGE_GAP_PX } from '@/constants/document-paper';
 import { DEFAULT_DOCUMENT_LAYOUT, type DocumentLayout } from '@/lib/document-layout';
 import { buildDocumentLayoutStyle } from '@/lib/document-layout';
 import { PagedDocumentCanvas } from './PagedDocumentCanvas';
@@ -172,7 +171,7 @@ export function DocumentPrintPreviewDialog({
             paperStyle={previewPaperStyle}
             headerFooter={previewLayout.headerFooter}
             showRepeatedPageChrome
-            pageGap={PAPER_PAGE_GAP_PX}
+            pageGap={0}
             overlayContent={overlayContent}
             commentAnchors={emptyAnchors}
             onEditorReady={() => undefined}
