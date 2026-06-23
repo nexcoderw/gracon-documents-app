@@ -7,9 +7,8 @@
  * mutating document JSON.
  */
 import {
-    calculateTiptapPageBlockOffset,
+    calculateTiptapCumulativePageBlockOffsets,
     createTiptapPageGeometry,
-    isTiptapPageBlockOverflowing,
     type TiptapPageGeometryInput,
 } from '@/lib/tiptap/tiptap-page-geometry';
 
@@ -17,23 +16,7 @@ const PAGE_BREAK_BEFORE_SELECTOR = '[data-page-break-before="true"]';
 const PAGE_BREAK_OFFSET_VAR = '--document-page-break-before-offset';
 const PAGE_AUTO_OFFSET_VAR = '--document-page-auto-offset';
 const PAGE_OVERFLOW_ATTR = 'data-document-page-overflow';
-const PAGE_LAYOUT_BLOCK_SELECTOR = [
-    ':scope > p',
-    ':scope > h1',
-    ':scope > h2',
-    ':scope > h3',
-    ':scope > h4',
-    ':scope > h5',
-    ':scope > h6',
-    ':scope > ul',
-    ':scope > ol',
-    ':scope > table',
-    ':scope > figure',
-    ':scope > img',
-    ':scope > .tableWrapper',
-    ':scope > .document-signature-block',
-    ':scope > [data-type="signature-block"]',
-].join(', ');
+const PAGE_LAYOUT_BLOCK_SELECTOR = ':scope > *';
 
 export interface TiptapPageLayoutOffsetResult {
     manualOffsetCount: number;
@@ -108,14 +91,20 @@ export function applyTiptapPageLayoutOffsets(
         return { manualOffsetCount, automaticOffsetCount, overflowBlockCount };
     }
 
-    blocks.forEach((block) => {
-        const manualBreak = block.getAttribute('data-page-break-before') === 'true';
-        const top = getRelativeTop(root, block);
-        const height = block.getBoundingClientRect().height;
-        const overflowing = isTiptapPageBlockOverflowing(geometry, top, height);
-        const offset = calculateTiptapPageBlockOffset(geometry, top, height, manualBreak);
+    const offsets = calculateTiptapCumulativePageBlockOffsets(
+        geometry,
+        blocks.map((block) => ({
+            top: getRelativeTop(root, block),
+            height: block.getBoundingClientRect().height,
+            forceNextPage: block.getAttribute('data-page-break-before') === 'true',
+        })),
+    );
 
-        if (overflowing) {
+    blocks.forEach((block, index) => {
+        const manualBreak = block.getAttribute('data-page-break-before') === 'true';
+        const { offset, overflow } = offsets[index] ?? { offset: 0, overflow: false };
+
+        if (overflow) {
             block.setAttribute(PAGE_OVERFLOW_ATTR, 'true');
             overflowBlockCount += 1;
         }
