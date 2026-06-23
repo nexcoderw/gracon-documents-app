@@ -279,10 +279,7 @@ export function ShareDocumentAccessManager({
                         {/* ── Card top: avatar + user + status ── */}
                         <div className={styles.cardTop}>
                             <div className={styles.avatar} aria-hidden="true">
-                                {access.user.imageUrl
-                                    ? <img src={access.user.imageUrl} alt="" className={styles.avatarImg} />
-                                    : <span className={styles.avatarInitials}>{getAccessInitials(access)}</span>
-                                }
+                                <span className={styles.avatarInitials}>{getAccessInitials(access)}</span>
                             </div>
                             <div className={styles.user}>
                                 <p className={styles.name}>{access.user.displayName}</p>
