@@ -24,7 +24,14 @@ commands.
    those page-break attributes.
 5. Expose page-break-before commands in user-facing menus once export and
    import parity exists.
-6. Treat section breaks, mixed orientation, and per-section margins as a later
+6. Render repeated page chrome from persisted header/footer/page-number
+   metadata in live editor and print-preview/export paths.
+7. Add schema-backed footnote references that remain editable, numbered in the
+   canvas, recovered from DOCX footnote XML, and exported as real DOCX
+   footnotes.
+8. Add generated table-of-contents insertion from current heading nodes using
+   normal editor schema content instead of a sidecar widget.
+9. Keep section breaks, mixed orientation, and per-section margins as a later
    architecture change.
 
 ## Measurement Rules
@@ -48,6 +55,15 @@ read-only rendering.
 Legacy standalone `pageBreak` and `sectionBreak` nodes should remain stripped
 from imported or old TipTap JSON unless a future migration explicitly revives
 them with full export and import parity.
+
+## Document Aid Rules
+
+Footnotes and generated tables of contents must remain schema-backed editor
+content. Footnotes use inline `footnoteReference` atoms so note text survives
+autosave, read-only rendering, DOCX import, and DOCX export. Static generated
+tables of contents insert normal headings and paragraphs with paragraph layout
+attributes; they are not live sidecar widgets and should not write measured page
+state into document JSON.
 
 ## Export And Cleanup Rules
 
