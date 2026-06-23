@@ -3,6 +3,8 @@ import { test } from 'node:test';
 import {
     calculateTiptapCumulativePageBlockOffsets,
     calculateTiptapPageBlockOffset,
+    createTiptapExportPageGeometry,
+    createTiptapLivePageGeometry,
     createTiptapPageGeometry,
     getTiptapPageRegionAt,
     isTiptapPageBlockOverflowing,
@@ -61,6 +63,13 @@ test('getTiptapPageRegionAt includes live page gaps when configured', () => {
         printableTop: 1124,
         printableBottom: 1904,
     });
+});
+
+test('live and export page geometry use separate page gap contracts', () => {
+    assert.equal(createTiptapLivePageGeometry({ pageHeight: 1000 }).pageGap, 24);
+    assert.equal(createTiptapLivePageGeometry({ pageHeight: 1000 }).pagePitch, 1024);
+    assert.equal(createTiptapExportPageGeometry({ pageHeight: 1000, pageGap: 24 }).pageGap, 0);
+    assert.equal(createTiptapExportPageGeometry({ pageHeight: 1000, pageGap: 24 }).pagePitch, 1000);
 });
 
 test('calculateTiptapPageBlockOffset moves blocks away from page footer chrome', () => {
@@ -136,8 +145,43 @@ test('cumulative page offsets measure following blocks after prior offsets', () 
         { top: 850, height: 40 },
         { top: 890, height: 80 },
     ]), [
-        { offset: 0, overflow: false },
-        { offset: 274, overflow: false },
-        { offset: 0, overflow: false },
+        { offset: 0, overflow: false, mode: 'none' },
+        { offset: 274, overflow: false, mode: 'automatic-offset' },
+        { offset: 0, overflow: false, mode: 'none' },
+    ]);
+});
+
+test('cumulative page offsets classify manual breaks and oversized overflow separately', () => {
+    const geometry = createTiptapPageGeometry({
+        pageHeight: 1000,
+        headerHeight: 40,
+        footerHeight: 50,
+        margins: { top: 60, right: 80, bottom: 70, left: 80 },
+    });
+
+    assert.deepEqual(calculateTiptapCumulativePageBlockOffsets(geometry, [
+        { top: 320, height: 40, forceNextPage: true },
+        { top: 1200, height: 900 },
+    ]), [
+        { offset: 780, overflow: false, mode: 'manual-break' },
+        { offset: 0, overflow: true, mode: 'oversized-overflow' },
+    ]);
+});
+
+test('cumulative page offsets do not mutate source block measurements', () => {
+    const geometry = createTiptapPageGeometry({
+        pageHeight: 1000,
+        headerHeight: 40,
+        footerHeight: 50,
+        margins: { top: 60, right: 80, bottom: 70, left: 80 },
+    });
+    const blocks = [
+        { top: 850, height: 60 },
+    ];
+
+    calculateTiptapCumulativePageBlockOffsets(geometry, blocks);
+
+    assert.deepEqual(blocks, [
+        { top: 850, height: 60 },
     ]);
 });
