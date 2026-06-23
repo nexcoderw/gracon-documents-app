@@ -51,6 +51,12 @@ The measured page count is advisory in the live editor. Manual page breaks and
 automatic block offsets improve visual parity, but long paragraphs that need
 line-level splitting remain a later pagination step.
 
+The live editor may include a gray page gap in the page pitch so users can see
+page boundaries clearly. Export and print capture must collapse that gap to
+zero so generated PDF pages remain exact A4 slices. Oversized blocks that cannot
+fit within one printable region should be flagged as render-only overflow
+instead of being split or mutated by DOM code.
+
 ## Future Page-Break Rules
 
 Manual page breaks are represented in the editor schema, not as unmanaged DOM
