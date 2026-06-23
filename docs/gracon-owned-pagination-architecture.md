@@ -41,9 +41,15 @@ Page metrics are derived from the rendered `.ProseMirror` element with
 status chip, left-page ruler labels, and an outline rail. Measurement must not
 write to document JSON.
 
-The measured page count is advisory in the live editor. Export remains the
-source of truth for generated PDF/DOCX pagination until schema-backed manual
-breaks are implemented.
+Page geometry is normalized by `src/lib/tiptap/tiptap-page-geometry.ts`.
+The live editor and export clones use temporary CSS variables from
+`src/lib/tiptap/tiptap-page-breaks.ts` to move whole rendered blocks away from
+header/footer chrome when they would cross an automatic page seam. These
+offsets are render-only and must not be written into TipTap JSON.
+
+The measured page count is advisory in the live editor. Manual page breaks and
+automatic block offsets improve visual parity, but long paragraphs that need
+line-level splitting remain a later pagination step.
 
 ## Future Page-Break Rules
 
