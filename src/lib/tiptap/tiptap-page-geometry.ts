@@ -1,20 +1,4 @@
-git add "docs/gracon-owned-pagination-architecture.md"
-git commit -m "docs(editor): clarify live and export page geometry"
-
-git add "src/app/(protected)/documents/[id]/edit/page.tsx"
-git commit -m "fix(editor): use live geometry for editor pagination"
-
-git add "src/components/editor/DocumentPrintPreviewDialog.tsx"
-git commit -m "fix(editor): collapse print preview page gap"
-
-git add "src/lib/export-document-capture.ts"
-git commit -m "fix(editor): use export geometry for pdf capture"
-
-git add "src/lib/tiptap/tiptap-page-geometry.ts"
-git commit -m "feat(editor): classify pagination block decisions"
-
-git add "test/editor/tiptap-page-geometry.test.ts"
-git commit -m "test(editor): cover live export geometry contract"/**
+/**
  * Shared page geometry helpers for Gracon-owned TipTap pagination.
  */
 import {
