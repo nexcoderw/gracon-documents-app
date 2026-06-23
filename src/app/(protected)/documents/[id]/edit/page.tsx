@@ -19,6 +19,8 @@ import { DocumentAccessTransitionBanner } from '@/components/editor/DocumentAcce
 import { DocumentRulerOverlay, DocumentPageRulerSidebar } from '@/components/editor/DocumentRulerOverlay';
 import { DocEditorHeader } from '@/components/editor/DocEditorHeader';
 import { DocumentCommentsPanel } from '@/components/editor/DocumentCommentsPanel';
+import { DocumentOutlinePanel } from '@/components/editor/DocumentOutlinePanel';
+import { DocumentPageStatus } from '@/components/editor/DocumentPageStatus';
 import { DocumentSigningProgressPanel } from '@/components/editor/DocumentSigningProgressPanel';
 import { DocumentLoadingState } from '@/components/editor/DocumentLoadingState';
 import { DocumentSurfaceErrorBoundary } from '@/components/editor/DocumentSurfaceErrorBoundary';
@@ -39,6 +41,11 @@ import { buildViewMenuItems } from '@/constants/view-menu';
 import { A4_PAPER_HEIGHT_PX, A4_PAPER_WIDTH_PX } from '@/constants';
 import { useStarred } from '@/lib/hooks/useStarred';
 import { useDocumentTitle } from '@/lib/hooks/useDocumentTitle';
+import {
+    createEmptyTiptapPaginationMetrics,
+    measureTiptapPagination,
+    type TiptapOutlineMetric,
+} from '@/lib/tiptap/tiptap-page-metrics';
 import {
     hasDocumentPermission,
     isDocumentBaseReadOnly,
@@ -112,6 +119,7 @@ export default function EditDocumentPage() {
     const [savingPageSetup, setSavingPageSetup] = useState(false);
     const [showSigning, setShowSigning] = useState(false);
     const [commentsOpen, setCommentsOpen] = useState(false);
+    const [commentSelectionRequestKey, setCommentSelectionRequestKey] = useState(0);
     const [comments, setComments] = useState<DocumentComment[]>([]);
     const [commentsLoading, setCommentsLoading] = useState(false);
     const [commentsLoadingMore, setCommentsLoadingMore] = useState(false);
@@ -130,14 +138,16 @@ export default function EditDocumentPage() {
     const [signingReadiness, setSigningReadiness] = useState<DocumentSigningReadiness | null>(null);
     const [signingReadinessLoading, setSigningReadinessLoading] = useState(false);
     const [editor, setEditor] = useState<Editor | null>(null);
-    const [leftRulerPages, setLeftRulerPages] = useState([{ pageNumber: 1, top: 0 }]);
+    const [paginationMetrics, setPaginationMetrics] = useState(
+        createEmptyTiptapPaginationMetrics,
+    );
     const continuousDocumentLayout = useMemo(() => ({
-        pageCount: 1,
-        activePage: 1,
+        pageCount: paginationMetrics.pageCount,
+        activePage: paginationMetrics.activePage,
         pageHeight: A4_PAPER_HEIGHT_PX,
-        contentHeight: A4_PAPER_HEIGHT_PX,
-        pages: [{ pageNumber: 1, top: 0 }],
-    }), []);
+        contentHeight: Math.max(A4_PAPER_HEIGHT_PX, paginationMetrics.pageCount * A4_PAPER_HEIGHT_PX),
+        pages: paginationMetrics.pages,
+    }), [paginationMetrics]);
     const pageRootRef = useRef<HTMLDivElement>(null);
     const canvasRef = useRef<HTMLDivElement>(null);
     const signatureRequests = doc?.signatureRequests ?? [];
@@ -177,23 +187,15 @@ export default function EditDocumentPage() {
     const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const rulerCommitLayoutRef = useRef<DocumentLayout | null>(null);
     const saveInFlightRef = useRef<Promise<boolean> | null>(null);
-    const measureLeftRulerPages = useCallback(() => {
+    const measurePaginationMetrics = useCallback(() => {
         const editorEl = canvasRef.current?.querySelector<HTMLElement>('.ProseMirror');
         if (!editorEl) return;
 
-        const contentHeight = Math.max(A4_PAPER_HEIGHT_PX, editorEl.scrollHeight);
-        const pageCount = Math.max(1, Math.ceil(contentHeight / A4_PAPER_HEIGHT_PX));
-
-        setLeftRulerPages((current) => {
-            if (current.length === pageCount) {
-                return current;
-            }
-
-            return Array.from({ length: pageCount }, (_, index) => ({
-                pageNumber: index + 1,
-                top: index * A4_PAPER_HEIGHT_PX,
-            }));
-        });
+        setPaginationMetrics(measureTiptapPagination(editorEl, {
+            pageHeight: A4_PAPER_HEIGHT_PX,
+            pageGap: 0,
+            contentHeight: A4_PAPER_HEIGHT_PX,
+        }));
     }, []);
     const beginAccessTransition = useCallback((message: string) => {
         setAccessTransitionMessage((current) => current ?? message);
@@ -246,20 +248,29 @@ export default function EditDocumentPage() {
         const editorEl = canvasRef.current?.querySelector<HTMLElement>('.ProseMirror');
         if (!editorEl) return;
 
-        const animationFrame = window.requestAnimationFrame(measureLeftRulerPages);
-        const resizeObserver = new ResizeObserver(measureLeftRulerPages);
+        const animationFrame = window.requestAnimationFrame(measurePaginationMetrics);
+        const resizeObserver = new ResizeObserver(measurePaginationMetrics);
+        const handleSelectionChange = () => {
+            const anchorNode = document.getSelection()?.anchorNode;
+            if (anchorNode && canvasRef.current?.contains(anchorNode)) {
+                window.requestAnimationFrame(measurePaginationMetrics);
+            }
+        };
+
         resizeObserver.observe(editorEl);
-        window.addEventListener('resize', measureLeftRulerPages);
+        window.addEventListener('resize', measurePaginationMetrics);
+        document.addEventListener('selectionchange', handleSelectionChange);
 
         return () => {
             window.cancelAnimationFrame(animationFrame);
             resizeObserver.disconnect();
-            window.removeEventListener('resize', measureLeftRulerPages);
+            window.removeEventListener('resize', measurePaginationMetrics);
+            document.removeEventListener('selectionchange', handleSelectionChange);
         };
     }, [
         doc?.id,
         editor,
-        measureLeftRulerPages,
+        measurePaginationMetrics,
     ]);
 
     // Load document
@@ -487,11 +498,11 @@ export default function EditDocumentPage() {
         dirtyRef.current = true;
         setSaveStatus('idle');
         window.requestAnimationFrame(() => {
-            measureLeftRulerPages();
+            measurePaginationMetrics();
         });
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(() => { void save(); }, 3000);
-    }, [measureLeftRulerPages, save]);
+    }, [measurePaginationMetrics, save]);
 
     const handleManualSave = useCallback(async () => {
         if (saveTimerRef.current) {
@@ -976,6 +987,27 @@ export default function EditDocumentPage() {
         }
     }
 
+    function handleOpenCommentComposer() {
+        if (!canComment) {
+            toast.warning('You do not have permission to add comments to this document.');
+            return;
+        }
+
+        setCommentsOpen(true);
+        setCommentSelectionRequestKey((current) => current + 1);
+    }
+
+    function handleSelectOutlineItem(item: TiptapOutlineMetric) {
+        const canvasEl = canvasRef.current;
+        const editorEl = canvasEl?.querySelector<HTMLElement>('.ProseMirror');
+        if (!canvasEl || !editorEl) return;
+
+        const editorTop = editorEl.getBoundingClientRect().top - canvasEl.getBoundingClientRect().top;
+        const nextTop = Math.max(0, canvasEl.scrollTop + editorTop + (item.top * zoomScale) - 42);
+
+        canvasEl.scrollTo({ top: nextTop, behavior: 'smooth' });
+    }
+
     return (
         <div
             ref={pageRootRef}
@@ -1011,6 +1043,7 @@ export default function EditDocumentPage() {
                 signingStatus={signingStatus}
                 isStarred={isStarred(doc.id)}
                 onOpenComments={() => setCommentsOpen(true)}
+                onCreateComment={handleOpenCommentComposer}
                 onToggleStar={() => toggleStar(doc.id)}
                 onManualSave={handleManualSave}
                 onShareActivityRecorded={handleShareActivityRecorded}
@@ -1120,7 +1153,7 @@ export default function EditDocumentPage() {
                     <div className="ded-ruler-sidebar">
                         <DocumentPageRulerSidebar
                             canvasRef={canvasRef}
-                            pages={leftRulerPages}
+                            pages={continuousDocumentLayout.pages}
                             pageHeight={continuousDocumentLayout.pageHeight}
                             zoomScale={zoomScale}
                             margins={documentLayout.margins}
@@ -1128,6 +1161,14 @@ export default function EditDocumentPage() {
                         />
                     </div>
                 )}
+
+                <DocumentOutlinePanel
+                    outline={paginationMetrics.outline}
+                    activePage={paginationMetrics.activePage}
+                    onSelect={handleSelectOutlineItem}
+                />
+
+                <DocumentPageStatus metrics={paginationMetrics} />
 
                 {/* ── Paper canvas ── */}
                 <DocumentSurfaceErrorBoundary
@@ -1175,6 +1216,7 @@ export default function EditDocumentPage() {
                 editor={editor}
                 canComment={canComment}
                 canResolve={doc.access?.isOwner ?? true}
+                selectionRequestKey={commentSelectionRequestKey}
                 open={commentsOpen}
                 comments={comments}
                 loading={commentsLoading}
