@@ -414,6 +414,16 @@ export function useEditorActions({
             return;
         }
 
+        if (actionId === INSERT_ACTION_IDS.pageBreakBefore) {
+            if (isReadOnly) {
+                toast.warning('This document is read-only.');
+                return;
+            }
+
+            editor.commands.toggleParagraphPageBreakBefore();
+            return;
+        }
+
         if (actionId === INSERT_ACTION_IDS.signatureBlocks) {
             if (!canPrepareSignatureBlocks) {
                 toast.warning('Only the document owner can prepare signature blocks.');
