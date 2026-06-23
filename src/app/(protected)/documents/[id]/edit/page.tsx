@@ -46,7 +46,8 @@ import {
     measureTiptapPagination,
     type TiptapOutlineMetric,
 } from '@/lib/tiptap/tiptap-page-metrics';
-import { applyTiptapPageBreakOffsets } from '@/lib/tiptap/tiptap-page-breaks';
+import { applyTiptapPageLayoutOffsets } from '@/lib/tiptap/tiptap-page-breaks';
+import { createTiptapPageGeometry } from '@/lib/tiptap/tiptap-page-geometry';
 import {
     hasDocumentPermission,
     isDocumentBaseReadOnly,
@@ -188,17 +189,29 @@ export default function EditDocumentPage() {
     const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const rulerCommitLayoutRef = useRef<DocumentLayout | null>(null);
     const saveInFlightRef = useRef<Promise<boolean> | null>(null);
+    const documentLayout = useMemo(
+        () => normalizeDocumentLayout(doc?.layout),
+        [doc?.layout],
+    );
+    const documentLayoutStyle = useMemo(
+        () => buildDocumentLayoutStyle(documentLayout),
+        [documentLayout],
+    );
     const measurePaginationMetrics = useCallback(() => {
         const editorEl = canvasRef.current?.querySelector<HTMLElement>('.ProseMirror');
         if (!editorEl) return;
 
-        applyTiptapPageBreakOffsets(editorEl, A4_PAPER_HEIGHT_PX);
+        const pageGeometry = createTiptapPageGeometry({
+            pageHeight: A4_PAPER_HEIGHT_PX,
+            margins: documentLayout.margins,
+        });
+        applyTiptapPageLayoutOffsets(editorEl, pageGeometry);
         setPaginationMetrics(measureTiptapPagination(editorEl, {
             pageHeight: A4_PAPER_HEIGHT_PX,
             pageGap: 0,
-            contentHeight: A4_PAPER_HEIGHT_PX,
+            contentHeight: pageGeometry.printableBottom,
         }));
-    }, []);
+    }, [documentLayout.margins]);
     const beginAccessTransition = useCallback((message: string) => {
         setAccessTransitionMessage((current) => current ?? message);
 
@@ -681,14 +694,6 @@ export default function EditDocumentPage() {
 
         handleViewAction(actionId);
     }, [baseIsReadOnly, handleViewAction]);
-    const documentLayout = useMemo(
-        () => normalizeDocumentLayout(doc?.layout),
-        [doc?.layout],
-    );
-    const documentLayoutStyle = useMemo(
-        () => buildDocumentLayoutStyle(documentLayout),
-        [documentLayout],
-    );
     const activeParagraphLayout = useActiveParagraphLayout(editor);
     const applyParagraphIndentation = useCallback((indentation: ParagraphIndentation) => {
         if (!editor || baseIsReadOnly || !activeParagraphLayout) {
