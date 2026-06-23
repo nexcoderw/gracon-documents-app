@@ -22,11 +22,13 @@ import Link from '@tiptap/extension-link';
 import { ListStyleExtension } from '@/store/editor/list-style-extension';
 import { ParagraphLayoutExtension } from '@/store/editor/paragraph-layout-extension';
 import { SignatureBlockExtension } from '@/store/editor/signature-block-extension';
+import { FootnoteReferenceExtension } from '@/store/editor/footnote-reference-extension';
 import { StyledTableCell, StyledTableHeader } from '@/store/editor/table-cell-style-extension';
 import { normalizeEditorLinkUrl } from '@/lib/editor-link';
 import {
     annotateImportedDocxHtml,
     collectImportedParagraphLayouts,
+    extractFootnoteReferencesFromDocxXml,
     extractParagraphListStylesFromDocxXml,
     extractParagraphPageBreaksFromDocumentXml,
     extractParagraphTabStopsFromDocumentXml,
@@ -73,6 +75,7 @@ const IMPORT_EXTENSIONS = [
     }),
     ListStyleExtension,
     ParagraphLayoutExtension,
+    FootnoteReferenceExtension,
     SignatureBlockExtension,
 ];
 
@@ -104,10 +107,12 @@ async function readXmlPartsFromDocx(arrayBuffer: ArrayBuffer) {
     const zip = await JSZip.loadAsync(arrayBuffer);
     const documentXml = zip.file('word/document.xml');
     const numberingXml = zip.file('word/numbering.xml');
+    const footnotesXml = zip.file('word/footnotes.xml');
 
     return {
         documentXml: documentXml ? await documentXml.async('text') : null,
         numberingXml: numberingXml ? await numberingXml.async('text') : null,
+        footnotesXml: footnotesXml ? await footnotesXml.async('text') : null,
     };
 }
 
@@ -128,7 +133,7 @@ export async function importDocxToTiptap(file: File): Promise<ImportResult> {
     const mammoth = await import('mammoth');
 
     const arrayBuffer = await file.arrayBuffer();
-    const { documentXml, numberingXml } = await readXmlPartsFromDocx(arrayBuffer);
+    const { documentXml, numberingXml, footnotesXml } = await readXmlPartsFromDocx(arrayBuffer);
     const paragraphTabStops = documentXml
         ? extractParagraphTabStopsFromDocumentXml(documentXml)
         : [];
@@ -137,6 +142,9 @@ export async function importDocxToTiptap(file: File): Promise<ImportResult> {
         : [];
     const paragraphListStyles = documentXml
         ? extractParagraphListStylesFromDocxXml(documentXml, numberingXml)
+        : [];
+    const footnoteReferences = documentXml
+        ? extractFootnoteReferencesFromDocxXml(documentXml, footnotesXml)
         : [];
 
     let paragraphLayouts = collectImportedParagraphLayouts(null);
@@ -157,7 +165,12 @@ export async function importDocxToTiptap(file: File): Promise<ImportResult> {
             },
         },
     );
-    const html = annotateImportedDocxHtml(rawHtml, paragraphLayouts, paragraphListStyles);
+    const html = annotateImportedDocxHtml(
+        rawHtml,
+        paragraphLayouts,
+        paragraphListStyles,
+        footnoteReferences,
+    );
 
     if (!html.trim()) {
         throw new Error('The document appears to be empty or could not be parsed.');
