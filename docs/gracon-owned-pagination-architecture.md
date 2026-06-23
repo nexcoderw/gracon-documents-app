@@ -22,7 +22,8 @@ commands.
 3. Add schema-backed page-break-before attributes to paragraph-like nodes.
 4. Teach print preview, PDF export, DOCX export, and DOCX import to preserve
    those page-break attributes.
-5. Only then expose page-break commands in user-facing menus.
+5. Expose page-break-before commands in user-facing menus once export and
+   import parity exists.
 6. Treat section breaks, mixed orientation, and per-section margins as a later
    architecture change.
 
@@ -39,9 +40,9 @@ breaks are implemented.
 
 ## Future Page-Break Rules
 
-Manual page breaks must be represented in the editor schema, not as unmanaged
-DOM nodes. The preferred first feature is `pageBreakBefore` on paragraphs and
-headings because it is easy to preserve through autosave, import, export, and
+Manual page breaks are represented in the editor schema, not as unmanaged DOM
+nodes. The first supported feature is `pageBreakBefore` on paragraphs and
+headings because it can be preserved through autosave, import, export, and
 read-only rendering.
 
 Legacy standalone `pageBreak` and `sectionBreak` nodes should remain stripped
