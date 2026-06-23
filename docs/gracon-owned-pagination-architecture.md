@@ -42,6 +42,8 @@ status chip, left-page ruler labels, and an outline rail. Measurement must not
 write to document JSON.
 
 Page geometry is normalized by `src/lib/tiptap/tiptap-page-geometry.ts`.
+Live editor callers should use `createTiptapLivePageGeometry`, while PDF/export
+callers should use `createTiptapExportPageGeometry`.
 The live editor and export clones use temporary CSS variables from
 `src/lib/tiptap/tiptap-page-breaks.ts` to move whole rendered blocks away from
 header/footer chrome when they would cross an automatic page seam. These
