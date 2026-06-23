@@ -46,6 +46,17 @@ export interface TiptapPageRegion {
     printableBottom: number;
 }
 
+export interface TiptapPageBlockMeasurement {
+    top: number;
+    height: number;
+    forceNextPage?: boolean;
+}
+
+export interface TiptapPageBlockOffset {
+    offset: number;
+    overflow: boolean;
+}
+
 function normalizePositiveNumber(value: unknown, fallback: number) {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0
         ? Math.round(value)
@@ -183,4 +194,33 @@ export function isTiptapPageBlockOverflowing(
 
     const region = getTiptapPageRegionAt(geometry, blockTop);
     return blockTop + Math.max(0, blockHeight) > region.printableBottom;
+}
+
+/**
+ * Calculates page offsets for a sequence of blocks using cumulative layout.
+ *
+ * @param geometry - Normalized page geometry.
+ * @param blocks - Natural block positions measured before offsets are applied.
+ * @returns Render offsets and overflow flags in block order.
+ */
+export function calculateTiptapCumulativePageBlockOffsets(
+    geometry: TiptapPageGeometry,
+    blocks: TiptapPageBlockMeasurement[],
+): TiptapPageBlockOffset[] {
+    let cumulativeOffset = 0;
+
+    return blocks.map((block) => {
+        const effectiveTop = block.top + cumulativeOffset;
+        const overflow = isTiptapPageBlockOverflowing(geometry, effectiveTop, block.height);
+        const offset = calculateTiptapPageBlockOffset(
+            geometry,
+            effectiveTop,
+            block.height,
+            block.forceNextPage === true,
+        );
+
+        cumulativeOffset += offset;
+
+        return { offset, overflow };
+    });
 }
