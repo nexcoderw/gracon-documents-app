@@ -85,6 +85,8 @@ This application lets users create, organize, edit, share, sign, verify, and rev
 - Insert-menu comment creation is wired through the existing comments drawer and selected-text anchors while comment history remains bounded and cursor-paginated
 - Page-break-before is now schema-backed on paragraph-like nodes, exposed through the insert menu, visible in formatting-mark mode, and preserved through live layout, PDF capture, DOCX export, and DOCX import
 - Live editor and print-preview page chrome render repeated headers, footers, and page numbers from the same persisted layout metadata consumed by export
+- Footnote references are schema-backed inline editor nodes, exposed through the insert menu, rendered as numbered references, recovered from DOCX footnote XML on import, and exported as real DOCX footnotes
+- The insert menu can generate a static table of contents from current heading nodes using the same schema-backed paragraph indentation and tab-stop model as the ruler/export path
 - Cross-tab share activity refresh and document metadata merge patterns
 - Typed insert-menu action registry so menu labels, enabled states, and editor command dispatch stay aligned while features are implemented incrementally
 - Quick insert actions for date/time and common special characters using undo-safe TipTap insert commands
