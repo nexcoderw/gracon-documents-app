@@ -35,6 +35,21 @@ interface RunStyle {
     underline?: IRunStylePropertiesOptions['underline'];
 }
 
+interface DocxFootnoteExport {
+    children: Paragraph[];
+}
+
+interface DocxConversionContext {
+    footnoteIds: Map<string, number>;
+    footnotes: Record<string, DocxFootnoteExport>;
+    nextFootnoteId: number;
+}
+
+export interface DocxDocumentContent {
+    children: FileChild[];
+    footnotes: Record<string, DocxFootnoteExport>;
+}
+
 const CSS_PX_TO_TWIP = 15;
 const MAX_LIST_LEVEL = 5;
 
@@ -136,16 +151,67 @@ function createTextRuns(text: string, style: RunStyle, docx: DocxModule) {
     });
 }
 
-function collectInlineRuns(nodes: Node[], style: RunStyle, docx: DocxModule): ParagraphChild[] {
+function getFootnoteReferenceId(element: HTMLElement, context: DocxConversionContext) {
+    const sourceId = element.dataset.footnoteId ?? element.dataset.footnoteText ?? '';
+    const key = sourceId.trim() || `footnote-${context.nextFootnoteId}`;
+    const existingId = context.footnoteIds.get(key);
+
+    if (existingId) {
+        return existingId;
+    }
+
+    const id = context.nextFootnoteId;
+    context.nextFootnoteId += 1;
+    context.footnoteIds.set(key, id);
+
+    return id;
+}
+
+function createFootnoteReferenceRun(
+    element: HTMLElement,
+    docx: DocxModule,
+    context: DocxConversionContext,
+): ParagraphChild[] {
+    const note = element.dataset.footnoteText?.replace(/\s+/g, ' ').trim();
+    if (!note) return [];
+
+    const id = getFootnoteReferenceId(element, context);
+    const key = String(id);
+
+    if (!context.footnotes[key]) {
+        context.footnotes[key] = {
+            children: [
+                new docx.Paragraph({
+                    children: [
+                        new docx.FootnoteReferenceRun(id),
+                        new docx.TextRun({ text: ` ${note}` }),
+                    ],
+                }),
+            ],
+        };
+    }
+
+    return [new docx.FootnoteReferenceRun(id)];
+}
+
+function collectInlineRuns(
+    nodes: Node[],
+    style: RunStyle,
+    docx: DocxModule,
+    context: DocxConversionContext,
+): ParagraphChild[] {
     return nodes.flatMap((node) => {
         if (node.nodeType === Node.TEXT_NODE) {
             return createTextRuns(node.textContent ?? '', style, docx);
         }
         if (!(node instanceof HTMLElement)) return [];
         if (node.tagName === 'BR') return [new docx.TextRun({ break: 1 })];
+        if (node.matches('sup[data-footnote-id][data-footnote-text]')) {
+            return createFootnoteReferenceRun(node, docx, context);
+        }
 
         const nextStyle = mergeRunStyle(node, style, docx);
-        const children = collectInlineRuns(Array.from(node.childNodes), nextStyle, docx);
+        const children = collectInlineRuns(Array.from(node.childNodes), nextStyle, docx, context);
         const href = node.tagName === 'A' ? node.getAttribute('href') : null;
 
         if (href && children.length > 0) {
@@ -212,10 +278,11 @@ function parseTabStopsAttribute(value: string | null) {
 function createParagraph(
     element: HTMLElement,
     docx: DocxModule,
+    context: DocxConversionContext,
     options: Omit<IParagraphOptions, 'children'> = {},
     runStyle: RunStyle = {},
 ) {
-    const children = collectInlineRuns(Array.from(element.childNodes), runStyle, docx);
+    const children = collectInlineRuns(Array.from(element.childNodes), runStyle, docx, context);
     return new docx.Paragraph({
         ...getParagraphOptions(element, docx),
         ...options,
@@ -238,45 +305,61 @@ function createListParagraph(
     reference: string,
     level: number,
     docx: DocxModule,
+    context: DocxConversionContext,
 ) {
-    return createParagraph(element, docx, {
+    return createParagraph(element, docx, context, {
         numbering: { reference, level: Math.min(level, MAX_LIST_LEVEL) },
         spacing: { after: 80 },
     });
 }
 
-function convertListItem(itemEl: HTMLElement, reference: string, level: number, docx: DocxModule): FileChild[] {
+function convertListItem(
+    itemEl: HTMLElement,
+    reference: string,
+    level: number,
+    docx: DocxModule,
+    context: DocxConversionContext,
+): FileChild[] {
     const nestedLists = Array.from(itemEl.children).filter(isNestedList);
     const contentBlocks = getDirectBlockElements(itemEl).filter((child) => !isNestedList(child));
     const firstBlock = contentBlocks[0] ?? itemEl;
-    const paragraphs: FileChild[] = [createListParagraph(firstBlock, reference, level, docx)];
+    const paragraphs: FileChild[] = [createListParagraph(firstBlock, reference, level, docx, context)];
 
     contentBlocks.slice(1).forEach((block) => {
-        paragraphs.push(createParagraph(block, docx, {
+        paragraphs.push(createParagraph(block, docx, context, {
             indent: { left: (level + 1) * 360 },
             spacing: { after: 80 },
         }));
     });
 
     nestedLists.forEach((list) => {
-        paragraphs.push(...convertList(list, level + 1, docx));
+        paragraphs.push(...convertList(list, level + 1, docx, context));
     });
 
     return paragraphs;
 }
 
-function convertList(listEl: HTMLElement, level: number, docx: DocxModule): FileChild[] {
+function convertList(
+    listEl: HTMLElement,
+    level: number,
+    docx: DocxModule,
+    context: DocxConversionContext,
+): FileChild[] {
     const reference = getListReferenceForElement(listEl);
     const items = Array.from(listEl.children).filter((child): child is HTMLElement => child.tagName === 'LI');
 
-    return items.flatMap((item) => convertListItem(item, reference, level, docx));
+    return items.flatMap((item) => convertListItem(item, reference, level, docx, context));
 }
 
-function getTableCellChildren(cellEl: HTMLElement, docx: DocxModule): TableCellChild[] {
+function getTableCellChildren(
+    cellEl: HTMLElement,
+    docx: DocxModule,
+    context: DocxConversionContext,
+): TableCellChild[] {
     const blockChildren = getDirectBlockElements(cellEl);
     const children = blockChildren.length > 0
-        ? blockChildren.flatMap((block) => convertBlock(block, docx))
-        : [createParagraph(cellEl, docx, { spacing: { after: 0 } })];
+        ? blockChildren.flatMap((block) => convertBlock(block, docx, context))
+        : [createParagraph(cellEl, docx, context, { spacing: { after: 0 } })];
 
     return children.filter((child): child is TableCellChild => {
         return child instanceof docx.Paragraph || child instanceof docx.Table;
@@ -309,7 +392,7 @@ function getTableCellBorders(cellEl: HTMLElement, docx: DocxModule) {
     };
 }
 
-function convertTable(tableEl: HTMLElement, docx: DocxModule) {
+function convertTable(tableEl: HTMLElement, docx: DocxModule, context: DocxConversionContext) {
     const rows = Array.from(tableEl.querySelectorAll('tr')).map((rowEl) => {
         const cells = Array.from(rowEl.children).filter((child): child is HTMLElement => {
             return ['TD', 'TH'].includes(child.tagName);
@@ -321,7 +404,7 @@ function convertTable(tableEl: HTMLElement, docx: DocxModule) {
                 const background = getHexColor(window.getComputedStyle(cellEl).backgroundColor);
 
                 return new docx.TableCell({
-                    children: getTableCellChildren(cellEl, docx),
+                    children: getTableCellChildren(cellEl, docx, context),
                     shading: background && background !== 'FFFFFF'
                         ? { type: docx.ShadingType.CLEAR, fill: background }
                         : undefined,
@@ -340,34 +423,52 @@ function convertTable(tableEl: HTMLElement, docx: DocxModule) {
     });
 }
 
-function convertBlock(element: HTMLElement, docx: DocxModule): FileChild[] {
+function convertBlock(element: HTMLElement, docx: DocxModule, context: DocxConversionContext): FileChild[] {
     if (isDocumentPageBoundaryElement(element)) {
         return [new docx.Paragraph({ pageBreakBefore: true })];
     }
     if (element.classList.contains('tableWrapper')) {
         const table = element.querySelector('table');
-        return table instanceof HTMLElement ? [convertTable(table, docx)] : [];
+        return table instanceof HTMLElement ? [convertTable(table, docx, context)] : [];
     }
-    if (element.tagName === 'TABLE') return [convertTable(element, docx)];
-    if (['UL', 'OL'].includes(element.tagName)) return convertList(element, 0, docx);
+    if (element.tagName === 'TABLE') return [convertTable(element, docx, context)];
+    if (['UL', 'OL'].includes(element.tagName)) return convertList(element, 0, docx, context);
     if (element.tagName === 'HR') return [new docx.Paragraph({ thematicBreak: true })];
     if (element.tagName === 'BLOCKQUOTE') {
-        return [createParagraph(element, docx, {
+        return [createParagraph(element, docx, context, {
             indent: { left: 360 },
             shading: { type: docx.ShadingType.CLEAR, fill: 'F4F1FF' },
         })];
     }
 
-    return [createParagraph(element, docx)];
+    return [createParagraph(element, docx, context)];
+}
+
+/**
+ * Converts the editor content element into editable DOCX content and footnotes.
+ */
+export function convertEditorDomToDocxDocumentContent(
+    editorEl: HTMLElement,
+    docx: DocxModule,
+): DocxDocumentContent {
+    const context: DocxConversionContext = {
+        footnoteIds: new Map(),
+        footnotes: {},
+        nextFootnoteId: 1,
+    };
+    const children = Array.from(editorEl.children).flatMap((child) => {
+        return child instanceof HTMLElement ? convertBlock(child, docx, context) : [];
+    });
+
+    return {
+        children: children.length > 0 ? children : [new docx.Paragraph('')],
+        footnotes: context.footnotes,
+    };
 }
 
 /**
  * Converts the editor content element into editable DOCX paragraphs and tables.
  */
 export function convertEditorDomToDocxChildren(editorEl: HTMLElement, docx: DocxModule): FileChild[] {
-    const children = Array.from(editorEl.children).flatMap((child) => {
-        return child instanceof HTMLElement ? convertBlock(child, docx) : [];
-    });
-
-    return children.length > 0 ? children : [new docx.Paragraph('')];
+    return convertEditorDomToDocxDocumentContent(editorEl, docx).children;
 }
