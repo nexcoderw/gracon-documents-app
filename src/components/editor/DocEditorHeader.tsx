@@ -12,7 +12,7 @@
  */
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import type { Editor } from '@tiptap/react';
 import { HugeiconsIcon } from '@hugeicons/react';
@@ -23,7 +23,7 @@ import {
 import type { MenuItem } from '@/constants';
 import type { DocumentDetail } from '@/api/documents.api';
 import type { SignatureBlockSigner } from '@/lib/editor-signature-blocks';
-import { MENU_BAR } from '@/constants';
+import { INSERT_ACTION_IDS, MENU_BAR } from '@/constants';
 import { DocEditorToolbar } from './DocEditorToolbar';
 import {
     DocEditorSignatureAction,
@@ -64,6 +64,7 @@ interface DocEditorHeaderProps {
     signingStatus: SigningActionStatus;
     isStarred?: boolean;
     onOpenComments?: () => void;
+    onCreateComment?: () => void;
     onToggleStar?: () => void;
     onManualSave?: () => void | Promise<void>;
     onShareActivityRecorded: () => void;
@@ -83,7 +84,7 @@ export function DocEditorHeader({
     isReadOnly, isLocked, canShare, canComment = false,
     canFinalise, canLock, canSign, canViewSignature,
     canPrepareSignatureBlocks = false, signatureBlockSigners = [], viewMenuItems,
-    onPrepareSignatureBlocks, signingStatus, isStarred = false, onOpenComments, onToggleStar, onManualSave, onShareActivityRecorded,
+    onPrepareSignatureBlocks, signingStatus, isStarred = false, onOpenComments, onCreateComment, onToggleStar, onManualSave, onShareActivityRecorded,
     onApplyForDigitalSignature, onCompleteIdentityVerification, onFinalise, onLock, onSign, onViewSignature, onViewAction,
 }: DocEditorHeaderProps) {
     const [shareOpen, setShareOpen] = useState(false);
@@ -108,7 +109,20 @@ export function DocEditorHeader({
         onTitleEditStart, onTitleSave,
         onFindToggle: () => setFindOpen((v) => !v),
         onViewAction,
+        onCreateComment,
     });
+    const menuBar = useMemo(() => MENU_BAR.map((menu) => {
+        if (menu.label !== 'Insert') return menu;
+
+        return {
+            ...menu,
+            items: menu.items.map((item) => (
+                item.type === 'action' && item.actionId === INSERT_ACTION_IDS.comment
+                    ? { ...item, disabled: !canComment }
+                    : item
+            )),
+        };
+    }), [canComment]);
 
     // Focus and select the title input whenever editing begins
     useEffect(() => {
@@ -228,7 +242,7 @@ export function DocEditorHeader({
 
                 {/* Menu strip */}
                 <nav className="ded-menubar__nav" aria-label="Document menu">
-                    {MENU_BAR.map(m => (
+                    {menuBar.map(m => (
                         <MenuDropdown
                             key={m.label}
                             label={m.label}
