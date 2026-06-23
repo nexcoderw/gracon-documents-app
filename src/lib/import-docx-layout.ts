@@ -36,6 +36,11 @@ export interface ImportedParagraphLayout {
     pageBreakBefore: boolean;
 }
 
+export interface ImportedDocxFootnoteReference {
+    id: string;
+    note: string;
+}
+
 const EMPTY_LAYOUT: ImportedParagraphLayout = {
     leftIndent: 0,
     firstLineIndent: 0,
@@ -172,6 +177,25 @@ export function collectImportedParagraphLayouts(document: unknown) {
 function getAttributeValue(xml: string, localName: string) {
     const pattern = new RegExp(`(?:[\\w.-]+:)?${localName}="([^"]+)"`);
     return xml.match(pattern)?.[1] ?? null;
+}
+
+function decodeXmlText(value: string) {
+    return value
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function extractTextFromWordXml(xml: string) {
+    const textMatches = xml.match(/<w:t\b[^>]*>[\s\S]*?<\/w:t>/g) ?? [];
+
+    return decodeXmlText(textMatches.map((match) => {
+        return match.replace(/<w:t\b[^>]*>/, '').replace(/<\/w:t>/, '');
+    }).join(' '));
 }
 
 function mapDocxNumberFormat(value: string | null, levelText: string | null): ImportedParagraphListStyle | null {
@@ -329,6 +353,46 @@ export function extractParagraphPageBreaksFromDocumentXml(documentXml: string) {
     });
 }
 
+/**
+ * Extracts footnote references from DOCX XML in the order they appear in the body.
+ *
+ * @param documentXml - Raw `word/document.xml` contents.
+ * @param footnotesXml - Raw `word/footnotes.xml` contents, when present.
+ * @returns Footnote references with their resolved note text.
+ */
+export function extractFootnoteReferencesFromDocxXml(
+    documentXml: string,
+    footnotesXml: string | null,
+): ImportedDocxFootnoteReference[] {
+    if (!documentXml.trim() || !footnotesXml?.trim()) {
+        return [];
+    }
+
+    const noteTextById = new Map<string, string>();
+    const footnoteMatches = footnotesXml.match(/<w:footnote\b[\s\S]*?<\/w:footnote>/g) ?? [];
+
+    footnoteMatches.forEach((footnoteXml) => {
+        const id = getAttributeValue(footnoteXml.match(/<w:footnote\b[^>]*>/)?.[0] ?? '', 'id');
+        if (!id || Number(id) < 1) return;
+
+        const note = extractTextFromWordXml(footnoteXml);
+        if (note) {
+            noteTextById.set(id, note);
+        }
+    });
+
+    const referenceMatches = documentXml.match(/<w:footnoteReference\b[^>]*\/?>/g) ?? [];
+
+    return referenceMatches
+        .map((referenceXml): ImportedDocxFootnoteReference | null => {
+            const id = getAttributeValue(referenceXml, 'id');
+            const note = id ? noteTextById.get(id) : null;
+
+            return id && note ? { id, note } : null;
+        })
+        .filter((reference): reference is ImportedDocxFootnoteReference => reference !== null);
+}
+
 export function mergeParagraphTabStopsIntoLayouts(
     paragraphLayouts: ImportedParagraphLayout[],
     paragraphTabStops: ImportedParagraphTabStop[][],
@@ -375,8 +439,13 @@ export function annotateImportedDocxHtml(
     html: string,
     paragraphLayouts: ImportedParagraphLayout[],
     paragraphListStyles: Array<ImportedParagraphListStyle | null> = [],
+    footnoteReferences: ImportedDocxFootnoteReference[] = [],
 ) {
-    if (!html.trim() || paragraphLayouts.length === 0 || typeof DOMParser === 'undefined') {
+    if (!html.trim() || (
+        paragraphLayouts.length === 0 &&
+        paragraphListStyles.length === 0 &&
+        footnoteReferences.length === 0
+    ) || typeof DOMParser === 'undefined') {
         return html;
     }
 
@@ -439,6 +508,27 @@ export function annotateImportedDocxHtml(
         node.setAttribute('data-list-style-type', listStyle.style);
         node.setAttribute('style', mergeStyle(node.getAttribute('style'), `list-style-type: ${listStyle.style}`));
     });
+
+    if (footnoteReferences.length > 0) {
+        const superscriptNodes = Array.from(document.body.querySelectorAll('sup'));
+        let footnoteIndex = 0;
+
+        superscriptNodes.forEach((node) => {
+            const footnote = footnoteReferences[footnoteIndex];
+            if (!footnote) return;
+
+            const text = node.textContent?.trim() ?? '';
+            if (text && !/^\[?\d+\]?$/.test(text)) {
+                return;
+            }
+
+            footnoteIndex += 1;
+            node.setAttribute('data-footnote-id', `imported-${footnote.id}-${footnoteIndex}`);
+            node.setAttribute('data-footnote-text', footnote.note);
+            node.setAttribute('title', footnote.note);
+            node.textContent = '';
+        });
+    }
 
     return document.body.innerHTML;
 }
