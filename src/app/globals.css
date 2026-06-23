@@ -301,6 +301,7 @@ body {
 }
 .document-layout-frame--paged {
   isolation: isolate;
+  background: var(--editor-canvas-bg);
 }
 .document-layout-frame .tiptap-editor-paper,
 .document-layout-frame .document-paper-sheet {
@@ -1112,6 +1113,20 @@ body {
   min-width: 0;
   overflow-wrap: break-word;
   padding-top: var(--document-page-auto-offset, 0px);
+}
+.document-layout-frame--show-marks .tiptap-editor .ProseMirror [data-document-page-overflow="true"] {
+  outline: 1px dashed rgba(245, 158, 11, 0.42);
+  outline-offset: 4px;
+}
+.document-layout-frame--show-marks .tiptap-editor .ProseMirror [data-document-page-overflow="true"]::before {
+  content: 'Block spans page';
+  display: block;
+  margin: 0 0 8px;
+  color: rgba(180, 83, 9, 0.82);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .tiptap-editor .ProseMirror .document-footnote-reference {
   counter-increment: document-footnote-reference;
