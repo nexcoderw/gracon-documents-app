@@ -1,12 +1,49 @@
 /**
- * Applies visual geometry for schema-backed paragraph page breaks.
+ * Applies visual geometry for schema-backed and automatic page breaks.
  *
- * Page-break state is persisted in TipTap node attributes. These helpers only
- * set CSS variables on the rendered DOM so live editing and PDF capture can
- * place break-before blocks on the next page without mutating document JSON.
+ * Page-break state is persisted in TipTap node attributes, while automatic
+ * page offsets are temporary render data. These helpers only set CSS variables
+ * on the rendered DOM so live editing and PDF capture avoid page chrome without
+ * mutating document JSON.
  */
+import {
+    calculateTiptapPageBlockOffset,
+    createTiptapPageGeometry,
+    type TiptapPageGeometryInput,
+} from '@/lib/tiptap/tiptap-page-geometry';
+
 const PAGE_BREAK_BEFORE_SELECTOR = '[data-page-break-before="true"]';
 const PAGE_BREAK_OFFSET_VAR = '--document-page-break-before-offset';
+const PAGE_AUTO_OFFSET_VAR = '--document-page-auto-offset';
+const PAGE_LAYOUT_BLOCK_SELECTOR = [
+    ':scope > p',
+    ':scope > h1',
+    ':scope > h2',
+    ':scope > h3',
+    ':scope > h4',
+    ':scope > h5',
+    ':scope > h6',
+    ':scope > ul',
+    ':scope > ol',
+    ':scope > table',
+    ':scope > figure',
+    ':scope > img',
+    ':scope > .tableWrapper',
+    ':scope > .document-signature-block',
+    ':scope > [data-type="signature-block"]',
+].join(', ');
+
+export interface TiptapPageLayoutOffsetResult {
+    manualOffsetCount: number;
+    automaticOffsetCount: number;
+}
+
+function getRelativeTop(root: HTMLElement, element: HTMLElement) {
+    const rootRect = root.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+
+    return elementRect.top - rootRect.top + root.scrollTop;
+}
 
 /**
  * Clears computed page-break offsets from rendered editor blocks.
@@ -20,37 +57,70 @@ export function clearTiptapPageBreakOffsets(root: HTMLElement) {
 }
 
 /**
- * Computes CSS offsets that move break-before blocks to the next page.
+ * Clears all computed pagination offsets from rendered editor blocks.
+ *
+ * @param root - Rendered `.ProseMirror` element or export clone.
+ */
+export function clearTiptapPageLayoutOffsets(root: HTMLElement) {
+    root.querySelectorAll<HTMLElement>(PAGE_LAYOUT_BLOCK_SELECTOR).forEach((element) => {
+        element.style.removeProperty(PAGE_BREAK_OFFSET_VAR);
+        element.style.removeProperty(PAGE_AUTO_OFFSET_VAR);
+    });
+}
+
+/**
+ * Computes CSS offsets that move break-before blocks to the next printable page.
  *
  * @param root - Rendered `.ProseMirror` element or export clone.
  * @param pageHeight - Page height in CSS pixels.
  * @returns Number of blocks that received a non-zero offset.
  */
 export function applyTiptapPageBreakOffsets(root: HTMLElement, pageHeight: number) {
-    const breakElements = Array.from(
-        root.querySelectorAll<HTMLElement>(PAGE_BREAK_BEFORE_SELECTOR),
-    );
+    const result = applyTiptapPageLayoutOffsets(root, { pageHeight });
 
-    clearTiptapPageBreakOffsets(root);
+    return result.manualOffsetCount;
+}
 
-    if (breakElements.length === 0 || pageHeight <= 0) {
-        return 0;
+/**
+ * Computes CSS offsets that keep editable blocks inside printable page regions.
+ *
+ * @param root - Rendered `.ProseMirror` element or export clone.
+ * @param input - Page geometry options for the current document layout.
+ * @returns Counts for manual and automatic offsets applied during this pass.
+ */
+export function applyTiptapPageLayoutOffsets(
+    root: HTMLElement,
+    input: TiptapPageGeometryInput = {},
+): TiptapPageLayoutOffsetResult {
+    const geometry = createTiptapPageGeometry(input);
+    const blocks = Array.from(root.querySelectorAll<HTMLElement>(PAGE_LAYOUT_BLOCK_SELECTOR));
+    let manualOffsetCount = 0;
+    let automaticOffsetCount = 0;
+
+    clearTiptapPageLayoutOffsets(root);
+
+    if (blocks.length === 0 || geometry.pageHeight <= 0 || geometry.printableHeight <= 0) {
+        return { manualOffsetCount, automaticOffsetCount };
     }
 
-    let shiftedCount = 0;
+    blocks.forEach((block) => {
+        const manualBreak = block.getAttribute('data-page-break-before') === 'true';
+        const top = getRelativeTop(root, block);
+        const height = block.getBoundingClientRect().height;
+        const offset = calculateTiptapPageBlockOffset(geometry, top, height, manualBreak);
 
-    breakElements.forEach((element) => {
-        const rootRect = root.getBoundingClientRect();
-        const elementRect = element.getBoundingClientRect();
-        const top = elementRect.top - rootRect.top + root.scrollTop;
-        const remainder = ((top % pageHeight) + pageHeight) % pageHeight;
-        const offset = remainder <= 1 ? 0 : Math.ceil(pageHeight - remainder);
+        if (offset <= 0) {
+            return;
+        }
 
-        if (offset > 0) {
-            element.style.setProperty(PAGE_BREAK_OFFSET_VAR, `${offset}px`);
-            shiftedCount += 1;
+        if (manualBreak) {
+            block.style.setProperty(PAGE_BREAK_OFFSET_VAR, `${offset}px`);
+            manualOffsetCount += 1;
+        } else {
+            block.style.setProperty(PAGE_AUTO_OFFSET_VAR, `${offset}px`);
+            automaticOffsetCount += 1;
         }
     });
 
-    return shiftedCount;
+    return { manualOffsetCount, automaticOffsetCount };
 }
