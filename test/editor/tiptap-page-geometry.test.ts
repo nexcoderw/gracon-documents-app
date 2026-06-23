@@ -1,3 +1,6 @@
+/**
+ * Regression tests for Gracon-owned TipTap page geometry.
+ */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
@@ -165,6 +168,39 @@ test('cumulative page offsets classify manual breaks and oversized overflow sepa
     ]), [
         { offset: 780, overflow: false, mode: 'manual-break' },
         { offset: 0, overflow: true, mode: 'oversized-overflow' },
+    ]);
+});
+
+test('cumulative page offsets keep manual breaks strongest when blocks also overflow', () => {
+    const geometry = createTiptapPageGeometry({
+        pageHeight: 1000,
+        headerHeight: 40,
+        footerHeight: 50,
+        margins: { top: 60, right: 80, bottom: 70, left: 80 },
+    });
+
+    assert.deepEqual(calculateTiptapCumulativePageBlockOffsets(geometry, [
+        { top: 850, height: 900, forceNextPage: true },
+    ]), [
+        { offset: 250, overflow: true, mode: 'manual-break' },
+    ]);
+});
+
+test('cumulative page offsets preserve manual breaks after prior automatic offsets', () => {
+    const geometry = createTiptapPageGeometry({
+        pageHeight: 1000,
+        pageGap: 24,
+        headerHeight: 40,
+        footerHeight: 50,
+        margins: { top: 60, right: 80, bottom: 70, left: 80 },
+    });
+
+    assert.deepEqual(calculateTiptapCumulativePageBlockOffsets(geometry, [
+        { top: 850, height: 60 },
+        { top: 910, height: 40, forceNextPage: true },
+    ]), [
+        { offset: 274, overflow: false, mode: 'automatic-offset' },
+        { offset: 964, overflow: false, mode: 'manual-break' },
     ]);
 });
 
