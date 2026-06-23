@@ -377,14 +377,7 @@ body {
     var(--paper-content-padding-right)
     calc(var(--paper-footer-height) + var(--paper-content-padding-bottom))
     var(--paper-content-padding-left);
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0,
-      transparent calc(var(--paper-height) + 23px),
-      rgba(91, 35, 255, 0.14) calc(var(--paper-height) + 23px),
-      rgba(91, 35, 255, 0.14) calc(var(--paper-height) + 24px)
-    );
+  background: transparent;
 }
 .document-layout-frame--web-layout .document-paper-sheet {
   width: var(--paper-width);
@@ -1118,6 +1111,7 @@ body {
   max-width: 100%;
   min-width: 0;
   overflow-wrap: break-word;
+  padding-top: var(--document-page-auto-offset, 0px);
 }
 .tiptap-editor .ProseMirror .document-footnote-reference {
   counter-increment: document-footnote-reference;
@@ -1137,7 +1131,10 @@ body {
   outline-offset: 2px;
 }
 .tiptap-editor .ProseMirror [data-page-break-before="true"] {
-  padding-top: var(--document-page-break-before-offset, 0px);
+  padding-top: calc(
+    var(--document-page-break-before-offset, 0px) +
+    var(--document-page-auto-offset, 0px)
+  );
   break-before: page;
   page-break-before: always;
 }
