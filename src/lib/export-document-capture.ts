@@ -13,6 +13,7 @@ import {
 } from '@/constants/document-paper';
 import { DEFAULT_DOCUMENT_LAYOUT, readDocumentLayoutFromElement } from '@/lib/document-layout';
 import { createPaperExportGeometry } from '@/lib/document-layout-export-parity';
+import { applyTiptapPageBreakOffsets } from '@/lib/tiptap/tiptap-page-breaks';
 
 async function waitForRenderableAssets(rootEl: HTMLElement) {
     if ('fonts' in document) {
@@ -70,6 +71,9 @@ function getPageCount(frameEl: HTMLElement) {
 
 function getContinuousExportPageCount(frameEl: HTMLElement) {
     const editorEl = frameEl.querySelector('.ProseMirror');
+    if (editorEl instanceof HTMLElement) {
+        applyTiptapPageBreakOffsets(editorEl, A4_PAPER_HEIGHT_PX);
+    }
     const contentHeight = Math.max(
         frameEl.scrollHeight,
         editorEl instanceof HTMLElement ? editorEl.scrollHeight : 0,
@@ -104,7 +108,13 @@ function createPageSurface(frameEl: HTMLElement, pageNumber: number, pageCount: 
 }
 
 function ensurePageSurfaces(frameEl: HTMLElement, pageCount: number) {
-    if (frameEl.querySelector('.document-page-surfaces')) return;
+    const existing = frameEl.querySelector('.document-page-surfaces');
+
+    if (existing) {
+        const existingCount = existing.querySelectorAll('.document-page-surface').length;
+        if (existingCount === pageCount) return;
+        existing.remove();
+    }
 
     const surfacesEl = document.createElement('div');
     surfacesEl.className = 'document-page-surfaces';
@@ -128,6 +138,10 @@ function prepareExportFrame(frameEl: HTMLElement, pageCount: number) {
         pageEl.style.top = `${index * A4_PAPER_HEIGHT_PX}px`;
         pageEl.style.height = `${A4_PAPER_HEIGHT_PX}px`;
     });
+    const editorEl = frameEl.querySelector('.ProseMirror');
+    if (editorEl instanceof HTMLElement) {
+        applyTiptapPageBreakOffsets(editorEl, A4_PAPER_HEIGHT_PX);
+    }
 }
 
 function createExportSheet(sourceEl: HTMLElement) {
