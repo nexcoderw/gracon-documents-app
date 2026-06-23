@@ -16,7 +16,10 @@ import type {
 } from 'docx';
 import { createParagraphExportGeometry } from './document-layout-export-parity';
 import { getListReferenceForElement } from './editor-list-style';
-import { isDocumentPageBoundaryElement } from './export-document-page-boundary';
+import {
+    hasParagraphPageBreakBefore,
+    isDocumentPageBoundaryElement,
+} from './export-document-page-boundary';
 
 type DocxModule = typeof import('docx');
 type TableCellChild = Paragraph | DocxTable;
@@ -155,6 +158,7 @@ function collectInlineRuns(nodes: Node[], style: RunStyle, docx: DocxModule): Pa
 
 function getParagraphOptions(element: HTMLElement, docx: DocxModule): Omit<IParagraphOptions, 'children'> {
     const computed = window.getComputedStyle(element);
+    const pageBreakBefore = hasParagraphPageBreakBefore(element);
     const paragraphGeometry = createParagraphExportGeometry({
         leftIndent: Number.parseFloat(element.getAttribute('data-left-indent') ?? ''),
         firstLineIndent: Number.parseFloat(element.getAttribute('data-first-line-indent') ?? ''),
@@ -178,6 +182,7 @@ function getParagraphOptions(element: HTMLElement, docx: DocxModule): Omit<IPara
                 ? { line: paragraphGeometry.docxLineSpacing, lineRule: docx.LineRuleType.AUTO }
                 : {}),
         },
+        ...(pageBreakBefore ? { pageBreakBefore: true } : {}),
         widowControl: true,
     };
 }
