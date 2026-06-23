@@ -46,6 +46,7 @@ import {
     measureTiptapPagination,
     type TiptapOutlineMetric,
 } from '@/lib/tiptap/tiptap-page-metrics';
+import { applyTiptapPageBreakOffsets } from '@/lib/tiptap/tiptap-page-breaks';
 import {
     hasDocumentPermission,
     isDocumentBaseReadOnly,
@@ -191,6 +192,7 @@ export default function EditDocumentPage() {
         const editorEl = canvasRef.current?.querySelector<HTMLElement>('.ProseMirror');
         if (!editorEl) return;
 
+        applyTiptapPageBreakOffsets(editorEl, A4_PAPER_HEIGHT_PX);
         setPaginationMetrics(measureTiptapPagination(editorEl, {
             pageHeight: A4_PAPER_HEIGHT_PX,
             pageGap: 0,
