@@ -163,7 +163,7 @@ Read that guide before changing the editor, document canvas, page setup, rulers,
 
 Read [SECURITY.md](./SECURITY.md) before changing session handoff, invitation
 acceptance, signing, profile images, editor image handling, public verification,
-or same-origin proxy routes.
+same-origin proxy routes, CSP headers, or app security workflow checks.
 
 ## Recent Production Notes
 
