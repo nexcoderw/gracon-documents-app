@@ -53,6 +53,7 @@ export function PagedDocumentCanvas({
     content,
     isReadOnly,
     zoomScale,
+    pageCount,
     pageHeight,
     contentHeight,
     showFormattingMarks,
@@ -71,7 +72,7 @@ export function PagedDocumentCanvas({
 
     return (
         <div ref={canvasRef} className="ded-canvas">
-            <div className="document-workspace-stage" data-page-count="1">
+            <div className="document-workspace-stage" data-page-count={pageCount}>
                 <div
                     className="document-layout-shell"
                     style={{ width: scaledFrameWidth, minHeight: scaledFrameHeight }}
@@ -79,13 +80,13 @@ export function PagedDocumentCanvas({
                     <div
                         className={getFrameClassName(showFormattingMarks)}
                         data-document-export-root="true"
-                        data-document-page-count="1"
+                        data-document-page-count={pageCount}
                         data-document-page-height={pageHeight}
                         data-document-title={title}
                         data-document-status={status}
                         data-document-header-enabled={String(headerFooter.headerEnabled)}
                         data-document-footer-enabled={String(headerFooter.footerEnabled)}
-                        data-document-page-numbers-enabled={String(false)}
+                        data-document-page-numbers-enabled={String(headerFooter.pageNumbersEnabled)}
                         data-document-header-text={headerText}
                         data-document-footer-text={footerText}
                         data-document-page-gap="0"
@@ -108,7 +109,7 @@ export function PagedDocumentCanvas({
                             paperTitle={title}
                             paperStatus={status}
                             pageNumber={1}
-                            pageCount={1}
+                            pageCount={pageCount}
                             paperStyle={paperStyle}
                             overlayContent={overlayContent}
                             commentAnchors={commentAnchors}
