@@ -33,3 +33,13 @@ test('insert menu exposes signature blocks as a ready action', () => {
         item.type === 'action' && item.actionId === INSERT_ACTION_IDS.signatureBlocks
     )));
 });
+
+test('insert menu exposes comments as a ready action', () => {
+    assert.equal(INSERT_ACTION_IDS.comment, 'insert:comment');
+    assert.equal(INSERT_ACTIONS.comment.status, 'ready');
+    assert.ok(INSERT_MENU_ITEMS.some((item) => (
+        item.type === 'action' &&
+        item.actionId === INSERT_ACTION_IDS.comment &&
+        !item.disabled
+    )));
+});
