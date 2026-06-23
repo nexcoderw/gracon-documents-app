@@ -33,12 +33,14 @@ export interface ImportedParagraphLayout {
     leftIndent: number;
     firstLineIndent: number;
     tabStops: ImportedParagraphTabStop[];
+    pageBreakBefore: boolean;
 }
 
 const EMPTY_LAYOUT: ImportedParagraphLayout = {
     leftIndent: 0,
     firstLineIndent: 0,
     tabStops: [],
+    pageBreakBefore: false,
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -141,6 +143,7 @@ export function createImportedParagraphLayout(element: unknown): ImportedParagra
         leftIndent,
         firstLineIndent,
         tabStops,
+        pageBreakBefore: false,
     };
 }
 
@@ -304,6 +307,28 @@ export function extractParagraphTabStopsFromDocumentXml(documentXml: string) {
     });
 }
 
+/**
+ * Extracts Word paragraph page-break-before flags in document order.
+ *
+ * @param documentXml - Raw `word/document.xml` contents.
+ * @returns Boolean page-break flags aligned with paragraph order.
+ */
+export function extractParagraphPageBreaksFromDocumentXml(documentXml: string) {
+    if (!documentXml.trim()) {
+        return [];
+    }
+
+    const paragraphMatches = documentXml.match(/<w:p\b[\s\S]*?<\/w:p>/g) ?? [];
+
+    return paragraphMatches.map((paragraphXml) => {
+        const paragraphProperties = paragraphXml.match(/<w:pPr\b[\s\S]*?<\/w:pPr>/)?.[0] ?? '';
+        const hasPageBreakBefore = /<w:pageBreakBefore\b[^>]*\/?>/.test(paragraphProperties);
+        const hasInlinePageBreak = /<w:br\b[^>]*(?:w:)?type="page"[^>]*\/?>/.test(paragraphXml);
+
+        return hasPageBreakBefore || hasInlinePageBreak;
+    });
+}
+
 export function mergeParagraphTabStopsIntoLayouts(
     paragraphLayouts: ImportedParagraphLayout[],
     paragraphTabStops: ImportedParagraphTabStop[][],
@@ -322,8 +347,21 @@ export function mergeParagraphTabStopsIntoLayouts(
     });
 }
 
+export function mergeParagraphPageBreaksIntoLayouts(
+    paragraphLayouts: ImportedParagraphLayout[],
+    paragraphPageBreaks: boolean[],
+) {
+    return paragraphLayouts.map((layout, index) => ({
+        ...layout,
+        pageBreakBefore: paragraphPageBreaks[index] ?? layout.pageBreakBefore,
+    }));
+}
+
 function hasLayout(layout: ImportedParagraphLayout) {
-    return layout.leftIndent !== 0 || layout.firstLineIndent !== 0 || layout.tabStops.length > 0;
+    return layout.leftIndent !== 0 ||
+        layout.firstLineIndent !== 0 ||
+        layout.tabStops.length > 0 ||
+        layout.pageBreakBefore;
 }
 
 function mergeStyle(existingStyle: string | null, nextStyle: string) {
@@ -369,6 +407,11 @@ export function annotateImportedDocxHtml(
 
         if (layout.tabStops.length > 0) {
             node.setAttribute('data-tab-stops', JSON.stringify(layout.tabStops));
+        }
+
+        if (layout.pageBreakBefore) {
+            node.setAttribute('data-page-break-before', 'true');
+            styleParts.push('break-before: page', 'page-break-before: always');
         }
 
         if (styleParts.length > 0) {
