@@ -147,6 +147,42 @@ function checkGitignore() {
     }
 }
 
+function checkNextSecurityHeaders() {
+    const configPath = join(projectRoot, 'next.config.ts');
+    if (!existsSync(configPath)) {
+        errors.push('next.config.ts is required.');
+        return;
+    }
+
+    const config = readFileSync(configPath, 'utf8');
+    for (const marker of [
+        'Content-Security-Policy',
+        'Referrer-Policy',
+        'X-Content-Type-Options',
+        'X-Frame-Options',
+        'Permissions-Policy',
+        'frame-ancestors',
+        'camera=()',
+    ]) {
+        if (!config.includes(marker)) {
+            errors.push(`next.config.ts must configure ${marker}.`);
+        }
+    }
+}
+
+function checkWorkflowSecretScanning() {
+    const workflowPath = join(projectRoot, '.github/workflows/app-security.yml');
+    if (!existsSync(workflowPath)) {
+        errors.push('.github/workflows/app-security.yml is required.');
+        return;
+    }
+
+    const workflow = readFileSync(workflowPath, 'utf8');
+    if (!workflow.includes('gitleaks/gitleaks-action')) {
+        errors.push('app-security workflow must run Gitleaks secret scanning.');
+    }
+}
+
 function checkSourceBoundary() {
     const sensitiveStorage = /\b(localStorage|sessionStorage)\b.*(token|jwt|secret|password|private|nid|pid|passport|recording|invite)/i;
     for (const file of walk(join(projectRoot, 'src'))) {
@@ -167,7 +203,40 @@ function checkSourceBoundary() {
             if (/NEXT_PUBLIC_.*(S3|AWS|SECRET|PRIVATE|PASSWORD)/.test(line)) {
                 errors.push(`${relativePath}:${index + 1} must not expose storage or secret values to the browser.`);
             }
+
+            for (const rawImagePattern of [
+                'src={comment.author.imageUrl',
+                'src={access.user.imageUrl',
+                'src={user.imageUrl',
+            ]) {
+                if (line.includes(rawImagePattern)) {
+                    errors.push(`${relativePath}:${index + 1} must not render collaborator profile image URLs directly.`);
+                }
+            }
         });
+    }
+}
+
+function checkProfileImageProxy() {
+    const routePath = join(projectRoot, 'src/app/api/profile-image/route.ts');
+    const avatarPath = join(projectRoot, 'src/components/shared/UserAvatar.tsx');
+
+    if (!existsSync(routePath)) {
+        errors.push('src/app/api/profile-image/route.ts is required to proxy private profile images.');
+        return;
+    }
+    if (!existsSync(avatarPath)) {
+        errors.push('src/components/shared/UserAvatar.tsx is required for same-origin avatars.');
+        return;
+    }
+
+    const route = readFileSync(routePath, 'utf8');
+    const avatar = readFileSync(avatarPath, 'utf8');
+    if (!route.includes('isAllowedS3ProfileImageUrl') || !route.includes('X-Amz-Signature')) {
+        errors.push('profile-image route must validate presigned S3 profile image sources.');
+    }
+    if (!avatar.includes('/api/profile-image')) {
+        errors.push('UserAvatar must render profile images through /api/profile-image.');
     }
 }
 
@@ -185,7 +254,10 @@ function checkRedirectSafety() {
 checkEnvExample();
 checkDeployEnv();
 checkGitignore();
+checkNextSecurityHeaders();
+checkWorkflowSecretScanning();
 checkSourceBoundary();
+checkProfileImageProxy();
 checkRedirectSafety();
 
 if (errors.length > 0) {
