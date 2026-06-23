@@ -1066,6 +1066,7 @@ body {
   min-width:   0;
   overflow-wrap: break-word;
   word-break: normal;
+  counter-reset: document-footnote-reference;
 }
 .tiptap-editor .ProseMirror h1 { font-size:2em;   font-weight:700; margin:1.2em 0 0.4em; line-height:1.2; }
 .tiptap-editor .ProseMirror h2 { font-size:1.5em; font-weight:600; margin:1em 0 0.3em;   line-height:1.3; }
@@ -1117,6 +1118,23 @@ body {
   max-width: 100%;
   min-width: 0;
   overflow-wrap: break-word;
+}
+.tiptap-editor .ProseMirror .document-footnote-reference {
+  counter-increment: document-footnote-reference;
+  color: var(--color-primary);
+  cursor: help;
+  font-size: 0.72em;
+  font-weight: 700;
+  line-height: 0;
+  padding: 0 1px;
+  vertical-align: super;
+}
+.tiptap-editor .ProseMirror .document-footnote-reference::before {
+  content: counter(document-footnote-reference);
+}
+.tiptap-editor .ProseMirror .document-footnote-reference.ProseMirror-selectednode {
+  outline: 2px solid rgba(91, 35, 255, 0.28);
+  outline-offset: 2px;
 }
 .tiptap-editor .ProseMirror [data-page-break-before="true"] {
   padding-top: var(--document-page-break-before-offset, 0px);
