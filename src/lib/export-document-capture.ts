@@ -15,6 +15,7 @@ import { DEFAULT_DOCUMENT_LAYOUT, readDocumentLayoutFromElement } from '@/lib/do
 import type { DocumentLayoutMargins } from '@/lib/document-layout';
 import { createPaperExportGeometry } from '@/lib/document-layout-export-parity';
 import { applyTiptapPageLayoutOffsets } from '@/lib/tiptap/tiptap-page-breaks';
+import { createTiptapExportPageGeometry } from '@/lib/tiptap/tiptap-page-geometry';
 
 async function waitForRenderableAssets(rootEl: HTMLElement) {
     if ('fonts' in document) {
@@ -76,10 +77,10 @@ function getContinuousExportPageCount(
 ) {
     const editorEl = frameEl.querySelector('.ProseMirror');
     if (editorEl instanceof HTMLElement) {
-        applyTiptapPageLayoutOffsets(editorEl, {
+        applyTiptapPageLayoutOffsets(editorEl, createTiptapExportPageGeometry({
             pageHeight: A4_PAPER_HEIGHT_PX,
             margins,
-        });
+        }));
     }
     const contentHeight = Math.max(
         frameEl.scrollHeight,
@@ -151,10 +152,10 @@ function prepareExportFrame(
     });
     const editorEl = frameEl.querySelector('.ProseMirror');
     if (editorEl instanceof HTMLElement) {
-        applyTiptapPageLayoutOffsets(editorEl, {
+        applyTiptapPageLayoutOffsets(editorEl, createTiptapExportPageGeometry({
             pageHeight: A4_PAPER_HEIGHT_PX,
             margins,
-        });
+        }));
     }
 }
 
