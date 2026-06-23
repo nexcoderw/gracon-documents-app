@@ -21,6 +21,7 @@ import { importDocumentToTiptap } from '@/lib/import-document';
 import { saveRenderedDocumentAs } from '@/lib/export-document';
 import { normalizeEditorImageUrl } from '@/lib/editor-image';
 import { normalizeEditorLinkUrl } from '@/lib/editor-link';
+import { createTableOfContentsNodes } from '@/lib/tiptap/tiptap-table-of-contents';
 import {
     buildSignatureBlockInserts,
     type SignatureBlockSigner,
@@ -52,6 +53,10 @@ function createDateTimeInsert(actionId: string) {
     if (actionId === INSERT_ACTION_IDS.currentTime) return time;
     if (actionId === INSERT_ACTION_IDS.dateTime) return `${date} at ${time}`;
     return null;
+}
+
+function promptForFootnoteNote() {
+    return window.prompt('Footnote text');
 }
 
 interface UseEditorActionsOptions {
@@ -411,6 +416,32 @@ export function useEditorActions({
 
         if (actionId === INSERT_ACTION_IDS.comment) {
             onCreateComment?.();
+            return;
+        }
+
+        if (actionId === INSERT_ACTION_IDS.tableOfContents) {
+            if (isReadOnly) {
+                toast.warning('This document is read-only.');
+                return;
+            }
+
+            editor.commands.insertContent(createTableOfContentsNodes(editor.getJSON() as Record<string, unknown>));
+            return;
+        }
+
+        if (actionId === INSERT_ACTION_IDS.footnote) {
+            if (isReadOnly) {
+                toast.warning('This document is read-only.');
+                return;
+            }
+
+            const note = promptForFootnoteNote();
+            if (note === null) return;
+
+            const inserted = editor.commands.insertFootnoteReference({ note });
+            if (!inserted) {
+                toast.warning('Enter footnote text before inserting.');
+            }
             return;
         }
 
