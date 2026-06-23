@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+    calculateTiptapCumulativePageBlockOffsets,
     calculateTiptapPageBlockOffset,
     createTiptapPageGeometry,
     getTiptapPageRegionAt,
@@ -119,4 +120,24 @@ test('page geometry flags oversized overflowing blocks for future line paginatio
     assert.equal(isTiptapPageBlockOversized(geometry, 900), true);
     assert.equal(isTiptapPageBlockOverflowing(geometry, 150, 900), true);
     assert.equal(isTiptapPageBlockOverflowing(geometry, 100, 100), false);
+});
+
+test('cumulative page offsets measure following blocks after prior offsets', () => {
+    const geometry = createTiptapPageGeometry({
+        pageHeight: 1000,
+        pageGap: 24,
+        headerHeight: 40,
+        footerHeight: 50,
+        margins: { top: 60, right: 80, bottom: 70, left: 80 },
+    });
+
+    assert.deepEqual(calculateTiptapCumulativePageBlockOffsets(geometry, [
+        { top: 820, height: 40 },
+        { top: 850, height: 40 },
+        { top: 890, height: 80 },
+    ]), [
+        { offset: 0, overflow: false },
+        { offset: 274, overflow: false },
+        { offset: 0, overflow: false },
+    ]);
 });
