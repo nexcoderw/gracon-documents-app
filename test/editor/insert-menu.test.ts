@@ -52,3 +52,20 @@ test('insert menu exposes comments as a ready action', () => {
         !item.disabled
     )));
 });
+
+test('insert menu exposes generated document aids as ready actions', () => {
+    assert.equal(INSERT_ACTION_IDS.tableOfContents, 'insert:table-of-contents');
+    assert.equal(INSERT_ACTIONS.tableOfContents.status, 'ready');
+    assert.equal(INSERT_ACTION_IDS.footnote, 'insert:footnote');
+    assert.equal(INSERT_ACTIONS.footnote.status, 'ready');
+    assert.ok(INSERT_MENU_ITEMS.some((item) => (
+        item.type === 'action' &&
+        item.actionId === INSERT_ACTION_IDS.tableOfContents &&
+        !item.disabled
+    )));
+    assert.ok(INSERT_MENU_ITEMS.some((item) => (
+        item.type === 'action' &&
+        item.actionId === INSERT_ACTION_IDS.footnote &&
+        !item.disabled
+    )));
+});
