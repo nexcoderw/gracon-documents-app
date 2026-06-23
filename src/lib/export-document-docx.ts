@@ -16,7 +16,7 @@ import {
     ORDERED_LIST_REFERENCE_BY_STYLE,
 } from '@/lib/editor-list-style';
 import type { OrderedListStyle } from '@/constants';
-import { convertEditorDomToDocxChildren } from './export-document-docx-dom';
+import { convertEditorDomToDocxDocumentContent } from './export-document-docx-dom';
 
 type DocxModule = typeof import('docx');
 function getEditorElement(rootEl: HTMLElement) {
@@ -170,9 +170,10 @@ function createSectionChrome(rootEl: HTMLElement, docx: DocxModule) {
 export async function createEditableDocxBlob(rootEl: HTMLElement) {
     const docx = await import('docx');
     const editorEl = getEditorElement(rootEl);
-    const children = convertEditorDomToDocxChildren(editorEl, docx);
+    const { children, footnotes } = convertEditorDomToDocxDocumentContent(editorEl, docx);
     const document = new docx.Document({
         numbering: createNumberingConfig(docx),
+        ...(Object.keys(footnotes).length > 0 ? { footnotes } : {}),
         sections: [
             {
                 properties: createPageProperties(rootEl),
