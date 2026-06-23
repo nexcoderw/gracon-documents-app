@@ -82,6 +82,8 @@ This application lets users create, organize, edit, share, sign, verify, and rev
 - Gracon-owned page break and pagination architecture is documented in `docs/gracon-owned-pagination-architecture.md`
 - Live editor pagination metrics now derive active page, page count, per-page ruler pages, and heading outline data from the rendered TipTap document without writing measurement state into document JSON
 - Live editor pagination now uses a shared page-geometry helper and temporary CSS offsets to keep whole blocks out of header/footer chrome when they would cross an automatic page seam
+- Live editor pages use a Google Docs-style gray gap between page surfaces, while PDF export keeps page gaps collapsed to preserve print geometry
+- Oversized blocks that cannot move as one whole printable unit are marked as render-only page overflow for future line-level pagination without mutating TipTap JSON
 - The editor includes a collapsible document outline generated from heading positions so long documents can be navigated before schema-backed page breaks are introduced
 - Insert-menu comment creation is wired through the existing comments drawer and selected-text anchors while comment history remains bounded and cursor-paginated
 - Page-break-before is now schema-backed on paragraph-like nodes, exposed through the insert menu, visible in formatting-mark mode, and preserved through live layout, PDF capture, DOCX export, and DOCX import
