@@ -12,7 +12,6 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import Image from 'next/image';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Cancel01Icon, Search01Icon, Share01Icon } from '@hugeicons/core-free-icons';
 import {
@@ -145,18 +144,7 @@ function mapDocumentPreferenceToRequirements(
 function ShareDialogAvatar({ user }: { user: UserSearchResult }) {
     return (
         <div className={styles.avatar} aria-hidden="true">
-            {user.imageUrl ? (
-                <Image
-                    src={user.imageUrl}
-                    alt=""
-                    width={40}
-                    height={40}
-                    unoptimized
-                    className={styles.avatarImg}
-                />
-            ) : (
-                <span className={styles.avatarInitials}>{getInitials(user)}</span>
-            )}
+            <span className={styles.avatarInitials}>{getInitials(user)}</span>
         </div>
     );
 }
