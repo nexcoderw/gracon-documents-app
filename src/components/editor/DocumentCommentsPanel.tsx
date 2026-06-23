@@ -6,7 +6,7 @@
  */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import {
     createDocumentComment,
@@ -28,6 +28,7 @@ interface DocumentCommentsPanelProps {
     error: string | null;
     hasMore: boolean;
     activeCommentId: string | null;
+    selectionRequestKey?: number;
     onCommentsChange: (comments: DocumentComment[]) => void;
     onReload: () => void | Promise<void>;
     onLoadMore: () => void | Promise<void>;
@@ -214,6 +215,7 @@ export function DocumentCommentsPanel({
     error,
     hasMore,
     activeCommentId,
+    selectionRequestKey,
     onCommentsChange,
     onReload,
     onLoadMore,
@@ -227,6 +229,23 @@ export function DocumentCommentsPanel({
     const [submitting, setSubmitting] = useState(false);
     const [busyCommentId, setBusyCommentId] = useState<string | null>(null);
     const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+    const composerRef = useRef<HTMLTextAreaElement>(null);
+    const lastSelectionRequestKeyRef = useRef(selectionRequestKey);
+
+    const captureSelection = useCallback(() => {
+        const selectedText = getSelectedText(editor);
+        if (!selectedText) {
+            toast.info('Select text in the document first.');
+            composerRef.current?.focus();
+            return;
+        }
+
+        const selection = editor?.state.selection;
+        setAnchorText(selectedText);
+        setAnchorFrom(selection?.from ?? null);
+        setAnchorTo(selection?.to ?? null);
+        composerRef.current?.focus();
+    }, [editor]);
 
     useEffect(() => {
         if (!open) return;
@@ -242,20 +261,15 @@ export function DocumentCommentsPanel({
         return () => window.removeEventListener('keydown', handleKey);
     }, [open, onClose]);
 
+    useEffect(() => {
+        if (!open || selectionRequestKey === undefined) return;
+        if (selectionRequestKey === lastSelectionRequestKeyRef.current) return;
+
+        lastSelectionRequestKeyRef.current = selectionRequestKey;
+        captureSelection();
+    }, [captureSelection, open, selectionRequestKey]);
+
     if (!open) return null;
-
-    function captureSelection() {
-        const selectedText = getSelectedText(editor);
-        if (!selectedText) {
-            toast.info('Select text in the document first.');
-            return;
-        }
-
-        const selection = editor?.state.selection;
-        setAnchorText(selectedText);
-        setAnchorFrom(selection?.from ?? null);
-        setAnchorTo(selection?.to ?? null);
-    }
 
     async function submitComment() {
         const trimmedContent = content.trim();
@@ -331,6 +345,7 @@ export function DocumentCommentsPanel({
             {canComment ? (
                 <div className={styles.composer}>
                     <textarea
+                        ref={composerRef}
                         className={styles.composerTextarea}
                         value={content}
                         onChange={(event) => setContent(event.target.value)}
