@@ -32,6 +32,7 @@ import { ParagraphLayoutExtension } from '@/store/editor/paragraph-layout-extens
 import { SignatureBlockExtension } from '@/store/editor/signature-block-extension';
 import { ImportedDocxStyleExtension } from '@/store/editor/imported-docx-style-extension';
 import { ResizableImageExtension } from '@/store/editor/resizable-image-extension';
+import { FootnoteReferenceExtension } from '@/store/editor/footnote-reference-extension';
 import { StyledTableCell, StyledTableHeader } from '@/store/editor/table-cell-style-extension';
 
 const SecureClickableLinkExtension = Extension.create({
@@ -187,6 +188,7 @@ export function RichTextEditor({
             ListStyleExtension,
             ParagraphLayoutExtension,
             ImportedDocxStyleExtension,
+            FootnoteReferenceExtension,
             SignatureBlockExtension,
         ],
         content: sanitizedInitialContent,
