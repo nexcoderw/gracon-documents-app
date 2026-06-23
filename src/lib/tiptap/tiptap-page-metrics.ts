@@ -1,3 +1,9 @@
+/**
+ * Measures live TipTap document content for page status and outline UI.
+ *
+ * These helpers read rendered editor geometry only. They must not mutate
+ * TipTap JSON or become the persistence model for future manual page breaks.
+ */
 export interface TiptapPageMetric {
     pageNumber: number;
     top: number;
@@ -11,6 +17,7 @@ export interface TiptapOutlineMetric {
     id: string;
     label: string;
     page: number;
+    top: number;
 }
 
 export interface TiptapPaginationMetrics {
@@ -74,6 +81,11 @@ function getActivePage(root: HTMLElement, pagePitch: number, pageCount: number) 
     return 1;
 }
 
+/**
+ * Creates stable fallback metrics before the editor DOM is ready.
+ *
+ * @returns A single-page empty metrics object for initial render.
+ */
 export function createEmptyTiptapPaginationMetrics(): TiptapPaginationMetrics {
     return {
         pageCount: 1,
@@ -91,6 +103,13 @@ export function createEmptyTiptapPaginationMetrics(): TiptapPaginationMetrics {
     };
 }
 
+/**
+ * Measures page counts, active page, per-page block totals, and headings.
+ *
+ * @param root - Rendered `.ProseMirror` editor element.
+ * @param options - Page height, gap, and content-height limits in CSS pixels.
+ * @returns Pagination metrics derived from the rendered editor DOM.
+ */
 export function measureTiptapPagination(
     root: HTMLElement,
     options: MeasureTiptapPaginationOptions,
@@ -127,6 +146,7 @@ export function measureTiptapPagination(
                     id: block.id || `rendered-heading-${index + 1}`,
                     label,
                     page: pageNumber,
+                    top,
                 });
             }
         }
