@@ -1,0 +1,34 @@
+/* Shared reduced-motion-aware loading indicator. */
+
+.loader {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: var(--loader-size);
+    height: var(--loader-size);
+    border: var(--loader-thickness) solid var(--loader-track);
+    border-top-color: var(--loader-color);
+    border-radius: 50%;
+    animation: spin 0.78s linear infinite;
+}
+.primary {
+    --loader-color: var(--color-primary);
+    --loader-track: var(--color-primary-subtle);
+}
+.white {
+    --loader-color: var(--color-on-primary);
+    --loader-track: color-mix(
+        in srgb,
+        var(--color-on-primary) 28%,
+        transparent
+    );
+}
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .loader {
+        animation-duration: 1.8s;
+    }
+}
