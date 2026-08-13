@@ -1,5 +1,7 @@
 'use client';
 
+import styles from './VerifySignerChain.module.css';
+
 type VerifySigner = {
     name: string;
     email: string;
@@ -23,128 +25,37 @@ export function VerifySignerChain({ signers }: VerifySignerChainProps) {
     }
 
     return (
-        <div
-            style={{
-                marginTop: 16,
-                display: 'grid',
-                gap: 10,
-            }}
-        >
+        <div className={styles.chain}>
             <div>
-                <p
-                    style={{
-                        margin: '0 0 4px',
-                        fontSize: 11,
-                        color: 'var(--color-text-muted)',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.06em',
-                    }}
-                >
-                    Verified signing chain
-                </p>
-                <p
-                    style={{
-                        margin: 0,
-                        fontSize: 12,
-                        color: 'var(--color-success)',
-                        opacity: 0.85,
-                    }}
-                >
-                    {signers.length} completed signature{signers.length === 1 ? '' : 's'} verified in recorded order
+                <p className={styles.heading}>Verified signing chain</p>
+                <p className={styles.summary}>
+                    {signers.length} completed signature
+                    {signers.length === 1 ? '' : 's'} verified in recorded order
                 </p>
             </div>
 
             {signers.map((signer) => (
                 <div
                     key={`${signer.signingOrder}-${signer.email}`}
-                    style={{
-                        display: 'grid',
-                        gap: 4,
-                        padding: '10px 12px',
-                        background: 'rgba(52,211,153,0.08)',
-                        border: '1px solid rgba(52,211,153,0.16)',
-                        borderRadius: 10,
-                    }}
+                    className={styles.signer}
                 >
-                    <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: 12,
-                            flexWrap: 'wrap',
-                        }}
-                    >
-                        <div
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                flexWrap: 'wrap',
-                            }}
-                        >
-                            <span
-                                style={{
-                                    minWidth: 22,
-                                    height: 22,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    borderRadius: 999,
-                                    background: 'rgba(52,211,153,0.18)',
-                                    color: 'var(--color-success)',
-                                    fontSize: 11,
-                                    fontWeight: 800,
-                                }}
-                            >
+                    <div className={styles.signerHeader}>
+                        <div className={styles.identity}>
+                            <span className={styles.order}>
                                 {signer.signingOrder}
                             </span>
-                            <span
-                                style={{
-                                    fontSize: 13,
-                                    fontWeight: 700,
-                                    color: 'var(--color-success)',
-                                }}
-                            >
-                                {signer.name}
-                            </span>
+                            <span className={styles.name}>{signer.name}</span>
                             {signer.isOwner && (
-                                <span
-                                    style={{
-                                        padding: '2px 7px',
-                                        borderRadius: 999,
-                                        background: 'rgba(91,35,255,0.10)',
-                                        color: 'var(--color-primary)',
-                                        fontSize: 9,
-                                        fontWeight: 800,
-                                        letterSpacing: '0.08em',
-                                        textTransform: 'uppercase',
-                                    }}
-                                >
-                                    Owner
-                                </span>
+                                <span className={styles.owner}>Owner</span>
                             )}
                         </div>
 
-                        <span
-                            style={{
-                                fontSize: 11,
-                                color: 'var(--color-text-muted)',
-                            }}
-                        >
+                        <span className={styles.date}>
                             {formatDateTime(signer.signedAt)}
                         </span>
                     </div>
 
-                    <div
-                        style={{
-                            fontSize: 12,
-                            color: 'var(--color-text-secondary)',
-                            wordBreak: 'break-word',
-                        }}
-                    >
-                        {signer.email}
-                    </div>
+                    <div className={styles.email}>{signer.email}</div>
                 </div>
             ))}
         </div>
