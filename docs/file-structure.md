@@ -82,11 +82,14 @@ Cleanup must run on success, failure, cancellation, route change, and unmount.
 
 ## Styling Rules
 
+- Keep `globals.css` limited to design tokens, document-level defaults, shared editor geometry, TipTap selectors, and unavoidable global utilities.
+- Give a component or route a sibling CSS Module when it owns static presentation or responsive behavior; do not create an empty module for logic-only files.
+- Use the shared `Button`, `Input`, `Card`, and `PremiumLoader` primitives before adding local generic controls.
 - Prefer colocated CSS modules for feature surfaces.
 - Use existing tokens and variables; do not hardcode palette hex values in components.
 - Do not add background gradients.
 - Document paper/export remains white for fidelity; workspace and application chrome follow the established documents-app tokens.
-- Keep computed inline styles limited to actual document geometry or user-selected values.
+- Keep computed inline styles limited to actual document geometry, measured editor state, or user-selected values; move static presentation into scoped modules.
 - Never let modal, rail, toolbar, or outline styling change printable dimensions.
 - Maintain 44-by-44-pixel mobile targets and minimum 13-pixel rendered text.
 
