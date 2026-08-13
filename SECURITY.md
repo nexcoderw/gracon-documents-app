@@ -51,6 +51,14 @@ CHECK_DEPLOY_ENV=true npm run check:security
 ## Browser Hardening
 
 - `next.config.ts` owns the app-wide CSP and security headers.
+- Browser API traffic stays on port `4002` through explicit `/api` and
+  `/api/v1` handlers; backend origins are server-only.
+- `connect-src 'self'` prevents browser JavaScript from bypassing the BFF.
+- Mutations require same-origin evidence, and every handler fixes its service,
+  method, path, query allowlist, body type, size limits, timeout, and response type.
+- Catch-all forwarding and browser-selected upstream URLs are forbidden.
+- Existing and newly uploaded editor-image render URLs are rewritten to the
+  same-origin `/api/v1/editor-images/render/:token` route.
 - The app security workflow runs Gitleaks before install/build steps.
 - Browser storage checks prevent token-like, invite-like, recording-like, and
   private identifier values from being added to persistent browser storage.
