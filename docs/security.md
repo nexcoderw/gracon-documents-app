@@ -24,6 +24,7 @@ For each security-sensitive change, identify:
 - Keep readable-cookie compatibility behind explicit development-only flags.
 - Use hard navigation for cross-origin login, identity verification, Profile, and Settings handoffs.
 - Send credentials only to configured Gracon origins; never derive an upstream origin from a query parameter.
+- Browser code must use explicit same-origin `/api` or `/api/v1` handlers for every backend operation; catch-all proxies are prohibited.
 - Logout must use the documents `/api/logout` path before returning to the local login route.
 
 ## Document Access
@@ -96,6 +97,7 @@ For each security-sensitive change, identify:
 ## Browser Hardening
 
 - Preserve the CSP and security headers in `next.config.ts`; new origins require explicit review.
+- Keep `connect-src 'self'`; backend service origins belong only in server-owned configuration.
 - Do not add unsafe inline script/eval allowances to support an editor plugin.
 - Keep secrets out of `NEXT_PUBLIC_*`; all prefixed variables are shipped to the browser.
 - New third-party editor/export/runtime packages require supply-chain, CSP, privacy, and document-access review.
