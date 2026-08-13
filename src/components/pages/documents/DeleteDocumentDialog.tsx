@@ -10,6 +10,7 @@
 import { useEffect, useRef } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Delete04Icon } from '@hugeicons/core-free-icons';
+import styles from './DeleteDocumentDialog.module.css';
 
 interface DeleteDocumentDialogProps {
     docTitle: string;
@@ -46,53 +47,55 @@ export function DeleteDocumentDialog({
 
     return (
         <div
-            className="delete-dialog-backdrop"
+            className={styles.backdrop}
             onClick={(e) => { if (e.target === e.currentTarget && !deleting) onCancel(); }}
             role="dialog"
             aria-modal="true"
             aria-labelledby="delete-dialog-title"
         >
-            <div className="delete-dialog">
+            <div className={styles.dialog}>
                 {/* Top accent stripe */}
-                <div className="delete-dialog__stripe" aria-hidden="true" />
+                <div className={styles.stripe} aria-hidden="true" />
 
                 {/* Icon */}
-                <div className="delete-dialog__icon-wrap" aria-hidden="true">
-                    <HugeiconsIcon icon={Delete04Icon} size={24} color="#dc2626" />
+                <div className={styles.iconWrap} aria-hidden="true">
+                    <HugeiconsIcon icon={Delete04Icon} size={24} color="currentColor" />
                 </div>
 
                 {/* Copy */}
-                <h2 id="delete-dialog-title" className="delete-dialog__title">
+                <h2 id="delete-dialog-title" className={styles.title}>
                     Delete this document?
                 </h2>
-                <p className="delete-dialog__doc-name" title={docTitle}>
+                <p className={styles.documentName} title={docTitle}>
                     {docTitle}
                 </p>
-                <p className="delete-dialog__warning">
+                <p className={styles.warning}>
                     This will permanently remove the document and cannot be undone.
                 </p>
 
                 {/* Divider */}
-                <div className="delete-dialog__divider" aria-hidden="true" />
+                <div className={styles.divider} aria-hidden="true" />
 
                 {/* Actions */}
-                <div className="delete-dialog__actions">
+                <div className={styles.actions}>
                     <button
+                        type="button"
                         ref={cancelRef}
                         onClick={onCancel}
                         disabled={deleting}
-                        className="delete-dialog__cancel-btn"
+                        className={`${styles.action} ${styles.cancel}`}
                     >
                         Cancel
                     </button>
                     <button
+                        type="button"
                         onClick={onConfirm}
                         disabled={deleting}
-                        className="delete-dialog__confirm-btn"
+                        className={`${styles.action} ${styles.confirm}`}
                     >
                         {deleting ? (
                             <>
-                                <span className="delete-dialog__spinner" aria-hidden="true" />
+                                <span className={styles.spinner} aria-hidden="true" />
                                 Deleting…
                             </>
                         ) : (
