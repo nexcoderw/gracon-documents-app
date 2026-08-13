@@ -7,6 +7,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui';
+import styles from './DocumentFinaliseDialog.module.css';
 
 interface DocumentFinaliseDialogProps {
     acceptedSignerCount: number;
@@ -60,37 +62,37 @@ export function DocumentFinaliseDialog({
 
     return (
         <div
-            className="docs-finalise-dialog__backdrop"
+            className={styles.backdrop}
             role="dialog"
             aria-modal="true"
             aria-labelledby="docs-finalise-dialog-title"
         >
-            <div className="docs-finalise-dialog">
-                <div className="docs-finalise-dialog__header">
-                    <p className="docs-finalise-dialog__eyebrow">Finalise document</p>
+            <div className={styles.dialog}>
+                <div>
+                    <p className={styles.eyebrow}>Finalise document</p>
                     <h2
                         id="docs-finalise-dialog-title"
-                        className="docs-finalise-dialog__title"
+                        className={styles.title}
                     >
                         Freeze content and choose required signers
                     </h2>
-                    <p className="docs-finalise-dialog__copy">
+                    <p className={styles.copy}>
                         Finalising stops further editing. Only explicitly required signers will be asked to sign.
                     </p>
                 </div>
 
-                <div className="docs-finalise-dialog__summary">
-                    <div className="docs-finalise-dialog__summary-item">
+                <div className={styles.summary}>
+                    <div className={styles.summaryItem}>
                         <span>Accepted invited signers</span>
                         <strong>{acceptedSignerCount}</strong>
                     </div>
-                    <div className="docs-finalise-dialog__summary-item">
+                    <div className={styles.summaryItem}>
                         <span>Owner signature required</span>
                         <strong>{requireOwnerSignature ? 'Yes' : 'No'}</strong>
                     </div>
                 </div>
 
-                <label className="docs-finalise-dialog__toggle">
+                <label className={styles.toggle}>
                     <input
                         type="checkbox"
                         checked={requireOwnerSignature}
@@ -108,28 +110,25 @@ export function DocumentFinaliseDialog({
                 </label>
 
                 {!canFinalise ? (
-                    <p className="docs-finalise-dialog__warning">
+                    <p className={styles.warning}>
                         Add at least one accepted signer with signing access or require your own signature before finalising.
                     </p>
                 ) : null}
 
-                <div className="docs-finalise-dialog__actions">
-                    <button
-                        type="button"
-                        className="ded-action-btn"
+                <div className={styles.actions}>
+                    <Button
+                        variant="ghost"
                         onClick={onClose}
                         disabled={submitting}
                     >
                         Cancel
-                    </button>
-                    <button
-                        type="button"
-                        className="ded-action-btn ded-action-btn--primary"
+                    </Button>
+                    <Button
                         onClick={() => void handleConfirm()}
                         disabled={!canFinalise || submitting}
                     >
                         {submitting ? 'Finalising…' : 'Finalise document'}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>
