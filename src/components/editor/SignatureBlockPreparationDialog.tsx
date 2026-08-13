@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { SignatureBlockSigner } from '@/lib/editor-signature-blocks';
+import { Button } from '@/components/ui';
+import styles from './SignatureBlockPreparationDialog.module.css';
 
 interface SignatureBlockPreparationDialogProps {
     open: boolean;
@@ -78,6 +80,8 @@ export function SignatureBlockPreparationDialog({
         );
         const shouldIncludeOwner = ownerWasPrepared || invitedSignerCount === 0;
 
+        // Opening the dialog rebuilds its draft from authoritative signer props.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setOrderedSigners(ordered);
         setIncludeOwner(shouldIncludeOwner);
     }, [existingSignerOrder, invitedSignerCount, open, ownerSigner, signers]);
@@ -86,14 +90,14 @@ export function SignatureBlockPreparationDialog({
 
     return (
         <div
-            className="signature-block-dialog__backdrop"
+            className={styles.backdrop}
             role="dialog"
             aria-modal="true"
             aria-labelledby="signature-block-dialog-title"
         >
-            <div className="signature-block-dialog">
-                <div className="signature-block-dialog__header">
-                    <p className="signature-block-dialog__eyebrow">Signature blocks</p>
+            <div className={styles.dialog}>
+                <div className={styles.header}>
+                    <p className={styles.eyebrow}>Signature blocks</p>
                     <h2 id="signature-block-dialog-title">
                         Choose signer blocks and their order
                     </h2>
@@ -103,7 +107,7 @@ export function SignatureBlockPreparationDialog({
                 </div>
 
                 {ownerSigner ? (
-                    <label className="signature-block-dialog__owner">
+                    <label className={styles.owner}>
                         <span>
                             <strong>Add my signature block</strong>
                             <small>
@@ -121,25 +125,26 @@ export function SignatureBlockPreparationDialog({
                     </label>
                 ) : null}
 
-                <div className="signature-block-dialog__list" aria-label="Signature block order">
+                <div className={styles.list} aria-label="Signature block order">
                     {selectedSigners.map((signer, index) => (
                         <div
                             key={getSignerKey(signer)}
-                            className="signature-block-dialog__row"
+                            className={styles.row}
                         >
-                            <span className="signature-block-dialog__handle" aria-hidden="true">
+                            <span className={styles.handle} aria-hidden="true">
                                 {index + 1}
                             </span>
-                            <span className="signature-block-dialog__person">
+                            <span className={styles.person}>
                                 <strong>{signer.displayName}</strong>
                                 <small>{signer.isOwner ? 'Document owner' : signer.email}</small>
                             </span>
-                            <span className="signature-block-dialog__assignment">
+                            <span className={styles.assignment}>
                                 {signer.isOwner ? 'Owner signature' : 'Required signer'}
                             </span>
-                            <div className="signature-block-dialog__moves">
+                            <div className={styles.moves}>
                                 <button
                                     type="button"
+                                    className={styles.moveButton}
                                     onClick={() => moveSigner(signer, -1)}
                                     disabled={index === 0}
                                 >
@@ -147,6 +152,7 @@ export function SignatureBlockPreparationDialog({
                                 </button>
                                 <button
                                     type="button"
+                                    className={styles.moveButton}
                                     onClick={() => moveSigner(signer, 1)}
                                     disabled={index === selectedSigners.length - 1}
                                 >
@@ -158,23 +164,22 @@ export function SignatureBlockPreparationDialog({
                 </div>
 
                 {!canConfirm ? (
-                    <p className="signature-block-dialog__warning">
+                    <p className={styles.warning}>
                         Add your signature block or invite at least one signer before preparing blocks.
                     </p>
                 ) : null}
 
-                <div className="signature-block-dialog__actions">
-                    <button type="button" className="ded-action-btn" onClick={onClose}>
+                <div className={styles.actions}>
+                    <Button type="button" variant="ghost" onClick={onClose}>
                         Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         type="button"
-                        className="ded-action-btn ded-action-btn--primary"
                         disabled={!canConfirm}
                         onClick={() => onConfirm(selectedSigners)}
                     >
                         Prepare {selectedSigners.length} block{selectedSigners.length === 1 ? '' : 's'}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>
