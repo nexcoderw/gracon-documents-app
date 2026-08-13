@@ -13,6 +13,8 @@ import {
     type DocumentAccessAuditEvent,
     type CollaboratorPermission,
 } from '@/api/documents.api';
+import { Button } from '@/components/ui';
+import styles from './ShareDocumentAuditLog.module.css';
 
 interface ShareDocumentAuditLogProps {
     documentId: string;
@@ -357,14 +359,14 @@ export function ShareDocumentAuditLog({
 
     if (loading) {
         return (
-            <div className="share-dialog__access-list">
+            <div className={styles.list}>
                 {[0, 1, 2].map((i) => (
-                    <div key={i} className="share-skeleton">
-                        <div className="share-skeleton__avatar" />
-                        <div className="share-skeleton__lines">
-                            <div className="share-skeleton__line" />
-                            <div className="share-skeleton__line" />
-                            <div className="share-skeleton__line" />
+                    <div key={i} className={styles.skeleton}>
+                        <div className={styles.skeletonAvatar} />
+                        <div className={styles.skeletonLines}>
+                            <div className={styles.skeletonLine} />
+                            <div className={styles.skeletonLine} />
+                            <div className={styles.skeletonLine} />
                         </div>
                     </div>
                 ))}
@@ -374,33 +376,33 @@ export function ShareDocumentAuditLog({
 
     if (error) {
         return (
-            <div className="share-dialog__access-error">
+            <div className={styles.error}>
                 <p>{error}</p>
-                <button type="button" onClick={() => void loadAuditLog()}>Try again</button>
+                <Button type="button" size="sm" onClick={() => void loadAuditLog()}>Try again</Button>
             </div>
         );
     }
 
     if (events.length === 0) {
-        return <p className="share-dialog__idle">No access activity has been recorded yet.</p>;
+        return <p className={styles.empty}>No access activity has been recorded yet.</p>;
     }
 
     return (
-        <ol className="share-dialog__audit-list">
+        <ol className={styles.timeline}>
             {events.map((event) => (
-                <li key={event.id} className="share-dialog__audit-item">
-                    <span className={`share-dialog__audit-dot share-dialog__audit-dot--${getTone(event.eventType)}`} />
-                    <div className="share-dialog__audit-card">
-                        <div className="share-dialog__audit-head">
-                            <p className="share-dialog__audit-title">{EVENT_LABELS[event.eventType]}</p>
-                            <time className="share-dialog__audit-time" dateTime={event.createdAt}>
+                <li key={event.id} className={styles.item}>
+                    <span className={`${styles.dot} ${getTone(event.eventType) === 'success' ? styles.successDot : getTone(event.eventType) === 'muted' ? styles.mutedDot : ''}`} />
+                    <div className={styles.card}>
+                        <div className={styles.head}>
+                            <p className={styles.title}>{EVENT_LABELS[event.eventType]}</p>
+                            <time className={styles.time} dateTime={event.createdAt}>
                                 {formatDate(event.createdAt)}
                             </time>
                         </div>
-                        <p className="share-dialog__audit-description">
+                        <p className={styles.description}>
                             {getEventDescription(event)}
                         </p>
-                        <p className="share-dialog__audit-meta">
+                        <p className={styles.meta}>
                             {['Actor: ' + getActorLabel(event), ...getEventMetrics(event)].join(' • ')}
                         </p>
                     </div>
