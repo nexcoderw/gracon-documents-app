@@ -99,6 +99,9 @@ Never use real auth, signature, S3, email, or production document services in fr
 - logout clears session, editor, cached document, and transient sensitive state;
 - profile/editor image path never exposes raw presigned storage URLs;
 - CSP/security baseline rejects forbidden browser storage and unsafe configuration.
+- browser requests show port `4002`, not backend ports `3000`, `3002`, or `3005`;
+- unknown query keys, unsafe path segments, cross-origin mutations, upstream redirects, oversized bodies, and oversized responses are rejected;
+- editor-image uploads and loaded legacy content use same-origin render paths.
 
 ## Invitation And Signing Matrix
 
