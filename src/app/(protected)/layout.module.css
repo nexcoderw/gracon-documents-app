@@ -1,19 +1,15 @@
 .errorShell {
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.errorShell {
-    min-height: 100dvh;
-    padding: 24px;
+    padding: clamp(1rem, 5vw, 1.5rem);
 }
 
 .errorCard {
     width: 100%;
     max-width: 460px;
     border-radius: var(--radius-xl);
-    padding: 32px;
     display: grid;
     gap: 18px;
     text-align: center;
@@ -34,10 +30,9 @@
 }
 
 .errorActions {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
 }
 
 .errorAction {
@@ -53,4 +48,8 @@
 .main {
     flex: 1;
     padding: 20px clamp(18px, 3.4vw, 38px) 42px;
+}
+
+@media (min-width: 30rem) {
+    .errorActions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
