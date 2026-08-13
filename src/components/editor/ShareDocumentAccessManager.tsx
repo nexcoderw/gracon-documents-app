@@ -8,7 +8,7 @@
  */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSessionUser } from '@/app/(protected)/layout';
 import {
     getDocumentAccessList,
@@ -143,7 +143,7 @@ export function ShareDocumentAccessManager({
         ? ACCESS_PERMISSION_OPTIONS
         : ACCESS_PERMISSION_OPTIONS.filter((o) => o.value !== 'MANAGE_ACCESS');
 
-    async function loadAccessList() {
+    const loadAccessList = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -158,9 +158,9 @@ export function ShareDocumentAccessManager({
         } finally {
             setLoading(false);
         }
-    }
+    }, [documentId, onCountChange]);
 
-    useEffect(() => { void loadAccessList(); }, [documentId, refreshKey]);
+    useEffect(() => { void loadAccessList(); }, [loadAccessList, refreshKey]);
 
     function replaceItem(updated: DocumentCollaboratorAccess) {
         setItems((current) => current.map((item) => item.id === updated.id ? updated : item));
