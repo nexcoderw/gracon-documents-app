@@ -7,9 +7,10 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from '@/components/ui';
+import { Button, Card, toast } from '@/components/ui';
 import { signDocumentInOneStep, type DocumentDetail } from '@/api/documents.api';
 import { DocumentLoadingState } from '@/components/editor/DocumentLoadingState';
+import styles from './SigningModal.module.css';
 
 interface SigningModalProps {
     document: DocumentDetail;
@@ -48,57 +49,57 @@ export function SigningModal({ document: doc, onClose, onSigned }: SigningModalP
     }
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(22,16,58,0.60)', backdropFilter: 'blur(8px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+        <div className={styles.backdrop}
             onClick={e => { if (e.target === e.currentTarget && step !== 'signing') onClose(); }}
         >
-            <div className="glass-strong animate-scale-in" style={{ width: '100%', maxWidth: 500, borderRadius: 'var(--radius-xl)', padding: 36 }}>
+            <Card strength="strong" padding="lg" className={styles.panel}>
 
                 {step === 'review' && (
                     <>
-                        <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                        <h2 className={styles.title}>
                             {doc.status === 'FINALISED' ? 'Sign Document' : 'Document Already Locked'}
                         </h2>
-                        <p style={{ margin: '0 0 24px', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                        <p className={styles.copy}>
                             {doc.status === 'FINALISED'
                                 ? 'By signing, you confirm this document is accurate and complete. Your signature will be recorded against the frozen document.'
                                 : 'This document has already been signed and locked.'}
                         </p>
 
                         {/* Document hash */}
-                        <div style={{ marginBottom: 24 }}>
-                            <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        <div className={styles.hashSection}>
+                            <p className={styles.label}>
                                 Document SHA-256 Hash
                             </p>
-                            <div style={{ position: 'relative' }}>
-                                <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-input)', border: '1px solid var(--color-border)', fontFamily: 'monospace', fontSize: 11, color: 'var(--color-text-secondary)', wordBreak: 'break-all', paddingRight: 70 }}>
+                            <div className={styles.hashWrap}>
+                                <div className={styles.hash}>
                                     {doc.contentHash}
                                 </div>
-                                <button onClick={copyHash} style={{ position: 'absolute', top: '50%', right: 8, transform: 'translateY(-50%)', background: copied ? 'var(--color-success-subtle)' : 'rgba(91,35,255,0.08)', border: `1px solid ${copied ? 'var(--color-success-border)' : 'var(--color-border)'}`, borderRadius: 6, padding: '3px 10px', fontSize: 11, color: copied ? 'var(--color-success)' : 'var(--color-text-secondary)', cursor: 'pointer' }}>
+                                <button type="button" onClick={copyHash} className={`${styles.copyButton} ${copied ? styles.copyButtonDone : ''}`}>
                                     {copied ? '✓ Copied' : 'Copy'}
                                 </button>
                             </div>
-                            <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--color-text-muted)' }}>
+                            <p className={styles.hint}>
                                 This is the unique fingerprint of your document. Any change to the content would produce a completely different hash.
                             </p>
                         </div>
 
                         {doc.status === 'FINALISED' && (
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <button onClick={onClose} className="btn-ghost" style={{ flex: 1 }}>Cancel</button>
-                                <button onClick={() => { void handleSign(); }} className="btn-primary" style={{ flex: 2 }} disabled={loading}>
+                            <div className={styles.actions}>
+                                <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                                <Button onClick={() => { void handleSign(); }} disabled={loading}>
                                     Sign with My Certificate
-                                </button>
+                                </Button>
                             </div>
                         )}
 
                         {doc.status === 'LOCKED' && (
-                            <button onClick={onClose} className="btn-primary" style={{ width: '100%' }}>Close</button>
+                            <Button fullWidth onClick={onClose}>Close</Button>
                         )}
                     </>
                 )}
 
                 {step === 'signing' && (
-                    <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <div className={styles.signing}>
                         <DocumentLoadingState
                             variant="panel"
                             size={56}
@@ -106,35 +107,35 @@ export function SigningModal({ document: doc, onClose, onSigned }: SigningModalP
                             message="Signing document..."
                             detail="Do not close this window"
                         />
-                        <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>Your private key is being used to sign the document hash. Do not close this window.</p>
+                        <p className={styles.signingCopy}>Your private key is being used to sign the document hash. Do not close this window.</p>
                     </div>
                 )}
 
                 {step === 'done' && (
                     <>
-                        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                            <div style={{ fontSize: 48, marginBottom: 12 }}>🔐</div>
-                            <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary)' }}>Signature Recorded</h2>
-                            <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                        <div className={styles.doneHeader}>
+                            <div className={styles.doneIcon}>🔐</div>
+                            <h2 className={styles.title}>Signature Recorded</h2>
+                            <p className={styles.copy}>
                                 Your document has been cryptographically signed. The owner can lock it once all required signatures are complete.
                             </p>
                         </div>
 
                         {signatureBytes && (
-                            <div style={{ marginBottom: 20 }}>
-                                <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Signature Bytes (base64)</p>
-                                <div style={{ padding: '10px 12px', borderRadius: 'var(--radius-md)', background: 'var(--color-success-subtle)', border: '1px solid var(--color-success-border)', fontFamily: 'monospace', fontSize: 10, color: 'var(--color-text-secondary)', wordBreak: 'break-all', maxHeight: 80, overflowY: 'auto' }}>
+                            <div className={styles.signatureSection}>
+                                <p className={styles.label}>Signature Bytes (base64)</p>
+                                <div className={styles.signature}>
                                     {signatureBytes}
                                 </div>
                             </div>
                         )}
 
-                        <button onClick={onClose} className="btn-primary" style={{ width: '100%' }}>
+                        <Button fullWidth onClick={onClose}>
                             Done
-                        </button>
+                        </Button>
                     </>
                 )}
-            </div>
+            </Card>
         </div>
     );
 }
