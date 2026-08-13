@@ -1,5 +1,115 @@
+/* Responsive presentation for the protected documents listing page. */
+
 .hiddenInput {
     display: none;
+}
+
+.createStrip {
+    margin-bottom: 1.75rem;
+}
+
+.createLabel {
+    margin: 0 0 0.75rem;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.createRow {
+    display: flex;
+    gap: 0.875rem;
+    overflow-x: auto;
+    padding: 0.125rem 0.125rem 0.5rem;
+    scrollbar-width: thin;
+}
+
+.createItem {
+    display: flex;
+    min-width: 6.5rem;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.createItem:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.createThumb {
+    position: relative;
+    display: flex;
+    width: 5.125rem;
+    height: 6.625rem;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 0.3125rem;
+    overflow: hidden;
+    padding: 0.625rem 0.5rem 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-solid);
+    transition:
+        border-color 150ms ease,
+        box-shadow 150ms ease,
+        transform 150ms ease;
+}
+
+.createItem:hover .createThumb,
+.createItem:focus-visible .createThumb {
+    border-color: var(--color-primary);
+    box-shadow: 0 0.25rem 1rem var(--color-primary-glow);
+    transform: translateY(-2px);
+}
+
+.createItem:focus-visible {
+    border-radius: var(--radius-sm);
+    outline: 3px solid var(--color-primary-subtle);
+    outline-offset: 3px;
+}
+
+.createAccent {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 0.1875rem;
+}
+
+.documentAccent {
+    background: var(--color-primary);
+}
+
+.importAccent {
+    background: var(--color-success);
+}
+
+.createLine,
+.emptyIconLine {
+    height: 0.25rem;
+    border-radius: 2px;
+    background: var(--color-border);
+}
+
+.headingLine,
+.emptyIconHeading {
+    width: 65%;
+    height: 0.375rem;
+    background: var(--color-border-primary);
+}
+
+.createItemLabel {
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .lineFull {
@@ -73,16 +183,137 @@
     flex-wrap: wrap;
 }
 
-.smallButton {
-    font-size: 12px;
-}
-
-.createLink,
-.emptyCreateLink {
+.actionLink {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
     text-decoration: none;
 }
 
-.paginationButton {
-    padding: 8px 16px;
-    font-size: 12px;
+.primaryAction {
+    background: var(--color-primary);
+    box-shadow: var(--btn-shadow-rest);
+    color: var(--color-on-primary);
+}
+
+.secondaryAction {
+    border: 1px solid var(--color-border);
+    background: var(--color-primary-subtle);
+    color: var(--color-text-primary);
+}
+
+.documentGrid,
+.skeletonGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
+    gap: 0.875rem;
+}
+
+.emptyState {
+    padding: clamp(2.5rem, 8vh, 5rem) 1rem;
+    text-align: center;
+}
+
+.emptyIcon {
+    position: relative;
+    display: flex;
+    width: 4rem;
+    height: 5rem;
+    flex-direction: column;
+    gap: 0.3125rem;
+    overflow: hidden;
+    margin: 0 auto 1.25rem;
+    padding: 0.625rem 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-solid);
+    box-shadow: 0 0.25rem 0.875rem var(--color-primary-subtle);
+}
+
+.emptyIconStripe {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 0.1875rem;
+    background: var(--color-primary);
+}
+
+.emptyHeading {
+    margin: 0 0 0.5rem;
+    color: var(--color-text-primary);
+    font-size: clamp(1.125rem, 4vw, 1.25rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.emptyCopy {
+    max-width: 32rem;
+    margin: 0 auto 1.5rem;
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.skeletonCard {
+    position: relative;
+    height: 15rem;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-elevated);
+    animation: skeletonPulse 1.4s ease-in-out infinite alternate;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+}
+
+.paginationLabel {
+    padding: 0 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+}
+
+@keyframes skeletonPulse {
+    from { opacity: 0.55; }
+    to { opacity: 1; }
+}
+
+@media (max-width: 29.999rem) {
+    .errorCard {
+        padding: 1.25rem 1rem;
+    }
+
+    .errorActions,
+    .pagination {
+        flex-direction: column;
+    }
+
+    .errorActions > *,
+    .pagination > button,
+    .actionLink {
+        width: 100%;
+    }
+
+    .paginationLabel {
+        order: -1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .createThumb,
+    .skeletonCard {
+        animation: none;
+        transition: none;
+    }
 }
