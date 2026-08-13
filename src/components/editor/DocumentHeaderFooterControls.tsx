@@ -1,6 +1,7 @@
 'use client';
 
 import type { DocumentHeaderFooter } from '@/lib/document-layout';
+import styles from './DocumentHeaderFooterControls.module.css';
 
 interface DocumentHeaderFooterControlsProps {
     value: DocumentHeaderFooter;
@@ -31,17 +32,17 @@ export function DocumentHeaderFooterControls({
     }
 
     return (
-        <div className="docs-page-setup__section">
-            <div className="docs-page-setup__section-header">
-                <span className="docs-page-setup__section-label">Headers and footers</span>
-                <p className="docs-page-setup__section-copy">
+        <div className={styles.section}>
+            <div className={styles.sectionHeader}>
+                <span className={styles.sectionLabel}>Headers and footers</span>
+                <p className={styles.sectionCopy}>
                     Configure repeated page chrome. Page numbers update automatically per page.
                 </p>
             </div>
 
-            <div className="docs-page-setup__toggle-row">
+            <div className={styles.toggleRow}>
                 {(['headerEnabled', 'footerEnabled', 'pageNumbersEnabled'] as ToggleField[]).map((field) => (
-                    <label key={field} className="docs-page-setup__toggle">
+                    <label key={field} className={styles.toggle}>
                         <input
                             type="checkbox"
                             checked={value[field]}
@@ -53,11 +54,11 @@ export function DocumentHeaderFooterControls({
                 ))}
             </div>
 
-            <div className="docs-page-setup__grid">
+            <div className={styles.grid}>
                 {(['headerText', 'footerText'] as TextField[]).map((field) => (
-                    <label key={field} className="docs-page-setup__field">
+                    <label key={field} className={styles.field}>
                         <span>{field === 'headerText' ? 'Header text' : 'Footer text'}</span>
-                        <div className="docs-page-setup__field-input docs-page-setup__field-input--wide">
+                        <div className={styles.fieldInput}>
                             <input
                                 type="text"
                                 maxLength={120}
