@@ -20,6 +20,13 @@ export const STATUS_LABELS: Record<DocumentStatus, string> = {
     LOCKED:    'Locked',
 };
 
+const STATUS_CLASS: Record<DocumentStatus, string> = {
+    DRAFT: styles.draft,
+    FINALISED: styles.finalised,
+    SIGNED: styles.signed,
+    LOCKED: styles.locked,
+};
+
 /** Converts an ISO timestamp into a human-readable relative time string. */
 function timeAgo(date: string): string {
     const diff  = Date.now() - new Date(date).getTime();
@@ -67,7 +74,7 @@ export function DocumentCard({ doc, starred, onDelete, onToggleStar }: DocumentC
 
                 {/* Status badge — top right */}
                 <div className={styles.badgeWrap}>
-                    <span className={`badge badge-${doc.status.toLowerCase()}`}>
+                    <span className={`${styles.status} ${STATUS_CLASS[doc.status]}`}>
                         {STATUS_LABELS[doc.status]}
                     </span>
                 </div>
@@ -81,7 +88,7 @@ export function DocumentCard({ doc, starred, onDelete, onToggleStar }: DocumentC
                 <div className={styles.hoverActions}>
                     <Link
                         href={`/documents/${doc.id}/edit`}
-                        className={`btn-primary ${styles.openButton}`}
+                        className={styles.openButton}
                     >
                         {doc.status === 'LOCKED' ? 'View' : 'Open'}
                     </Link>
@@ -111,8 +118,8 @@ export function DocumentCard({ doc, starred, onDelete, onToggleStar }: DocumentC
                         <HugeiconsIcon
                             icon={StarIcon}
                             size={14}
-                            color={starred ? '#f59e0b' : 'currentColor'}
-                            fill={starred ? '#f59e0b' : 'none'}
+                            color="currentColor"
+                            fill={starred ? 'currentColor' : 'none'}
                             strokeWidth={starred ? 1.5 : 2}
                         />
                     </button>
