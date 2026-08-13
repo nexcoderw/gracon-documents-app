@@ -1,8 +1,10 @@
+/** Shared labelled input for document-app forms and searches. */
 'use client';
 
-import { InputHTMLAttributes, forwardRef, ReactNode, useState } from 'react';
+import { InputHTMLAttributes, forwardRef, ReactNode, useId, useState } from 'react';
+import styles from './Input.module.css';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
     label?: string;
     error?: string;
     hint?: string;
@@ -11,6 +13,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
     showPasswordToggle?: boolean;
 }
 
+/** Renders a labelled input with accessible hint, error, and password controls. */
 export const Input = forwardRef<HTMLInputElement, InputProps>(
     (
         {
@@ -22,13 +25,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             showPasswordToggle = false,
             type = 'text',
             id,
-            style,
+            className = '',
             ...rest
         },
         ref,
     ) => {
         const [showPassword, setShowPassword] = useState(false);
-        const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
+        const generatedId = useId();
+        const inputId = id ?? generatedId;
 
         const resolvedType = showPasswordToggle
             ? showPassword
@@ -37,50 +41,21 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             : type;
 
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className={styles.field}>
                 {label && (
-                    <label
-                        htmlFor={inputId}
-                        style={{
-                            fontSize: 13,
-                            fontWeight: 500,
-                            color: 'var(--color-text-secondary)',
-                            letterSpacing: '0.01em',
-                        }}
-                    >
+                    <label htmlFor={inputId} className={styles.label}>
                         {label}
                         {rest.required && (
-                            <span
-                                aria-hidden="true"
-                                style={{
-                                    color: 'var(--color-primary)',
-                                    marginLeft: 3,
-                                }}
-                            >
+                            <span aria-hidden="true" className={styles.required}>
                                 *
                             </span>
                         )}
                     </label>
                 )}
 
-                <div
-                    style={{
-                        position: 'relative',
-                        display: 'flex',
-                        alignItems: 'center',
-                    }}
-                >
+                <div className={styles.control}>
                     {leftIcon && (
-                        <span
-                            aria-hidden="true"
-                            style={{
-                                position: 'absolute',
-                                left: 14,
-                                color: 'var(--color-text-muted)',
-                                display: 'flex',
-                                pointerEvents: 'none',
-                            }}
-                        >
+                        <span aria-hidden="true" className={`${styles.icon} ${styles.leftIcon}`}>
                             {leftIcon}
                         </span>
                     )}
@@ -89,13 +64,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                         ref={ref}
                         id={inputId}
                         type={resolvedType}
-                        className={`input-glass${error ? ' error' : ''}`}
-                        style={{
-                            paddingLeft: leftIcon ? 44 : 16,
-                            paddingRight:
-                                rightIcon || showPasswordToggle ? 44 : 16,
-                            ...style,
-                        }}
+                        className={[
+                            styles.input,
+                            leftIcon ? styles.withLeftIcon : '',
+                            rightIcon || showPasswordToggle ? styles.withRightIcon : '',
+                            error ? styles.errorInput : '',
+                            className,
+                        ].filter(Boolean).join(' ')}
                         aria-invalid={!!error}
                         aria-describedby={
                             error
@@ -107,23 +82,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                         {...rest}
                     />
 
-                    {(rightIcon || showPasswordToggle) && (
-                        <span
-                            aria-hidden={!showPasswordToggle}
-                            style={{
-                                position: 'absolute',
-                                right: 14,
-                                color: 'var(--color-text-muted)',
-                                display: 'flex',
-                                cursor: showPasswordToggle ? 'pointer' : 'default',
-                            }}
-                            onClick={
-                                showPasswordToggle
-                                    ? () => setShowPassword((previous) => !previous)
-                                    : undefined
-                            }
+                    {showPasswordToggle ? (
+                        <button
+                            type="button"
+                            className={styles.passwordToggle}
+                            onClick={() => setShowPassword((previous) => !previous)}
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            aria-pressed={showPassword}
                         >
-                            {showPasswordToggle ? (
                                 <svg
                                     width="18"
                                     height="18"
@@ -147,47 +113,22 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                                         </>
                                     )}
                                 </svg>
-                            ) : (
-                                rightIcon
-                            )}
+                        </button>
+                    ) : rightIcon ? (
+                        <span aria-hidden="true" className={`${styles.icon} ${styles.rightIcon}`}>
+                            {rightIcon}
                         </span>
-                    )}
+                    ) : null}
                 </div>
 
                 {error && (
-                    <p
-                        id={`${inputId}-error`}
-                        role="alert"
-                        style={{
-                            fontSize: 12,
-                            color: 'var(--color-error)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 5,
-                            margin: 0,
-                        }}
-                    >
-                        <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                        >
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-                        </svg>
+                    <p id={`${inputId}-error`} role="alert" className={`${styles.message} ${styles.error}`}>
                         {error}
                     </p>
                 )}
 
                 {hint && !error && (
-                    <p
-                        id={`${inputId}-hint`}
-                        style={{
-                            fontSize: 12,
-                            color: 'var(--color-text-muted)',
-                            margin: 0,
-                        }}
-                    >
+                    <p id={`${inputId}-hint`} className={`${styles.message} ${styles.hint}`}>
                         {hint}
                     </p>
                 )}
