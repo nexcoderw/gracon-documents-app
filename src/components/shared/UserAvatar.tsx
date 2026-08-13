@@ -7,6 +7,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import styles from './UserAvatar.module.css';
 
 export interface UserAvatarProfile {
@@ -54,6 +55,8 @@ export function UserAvatar({ user, size = 'md', className }: UserAvatarProps) {
     const source = !failed ? getProfileImageSource(user) : null;
 
     useEffect(() => {
+        // A different image source starts a fresh loading/fallback lifecycle.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFailed(false);
         setLoaded(false);
     }, [user.userId, user.imageUrl]);
@@ -65,10 +68,13 @@ export function UserAvatar({ user, size = 'md', className }: UserAvatarProps) {
         >
             {source && !loaded ? <span className={styles.loading} aria-hidden="true" /> : null}
             {source ? (
-                <img
+                <Image
                     src={source}
                     alt={`${displayName} profile photo`}
                     className={`${styles.image} ${loaded ? styles.imageLoaded : ''}`}
+                    fill
+                    sizes={size === 'sm' ? '32px' : '38px'}
+                    unoptimized
                     decoding="async"
                     referrerPolicy="no-referrer"
                     onLoad={() => setLoaded(true)}
