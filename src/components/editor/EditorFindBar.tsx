@@ -38,6 +38,8 @@ export function EditorFindBar({ editor, onClose }: EditorFindBarProps) {
         if (!query.trim()) return;
         const matches = collectMatches(editor, query);
         if (!matches.length) return;
+        // Query changes reset navigation before synchronizing the editor selection.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setMatchIndex(0);
         const match = matches[0];
         editor.chain().focus().setTextSelection({ from: match.from, to: match.to }).scrollIntoView().run();
