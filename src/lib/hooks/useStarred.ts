@@ -46,6 +46,8 @@ export function useStarred(): UseStarredResult {
 
     // Hydrate from localStorage after mount to avoid SSR mismatch.
     useEffect(() => {
+        // Browser storage is an external source and cannot be read during SSR.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setStarredIds(readStarred());
     }, []);
 
