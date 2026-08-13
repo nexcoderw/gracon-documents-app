@@ -1,27 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { clearSessionCookies, getSessionCookies } from '@/lib/server/session-proxy';
-
-const AUTH_BASE =
-    process.env.NEXT_PUBLIC_AUTH_API_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    'http://localhost:3000/api/v1';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  clearSessionCookies,
+  getSessionCookies,
+} from "@/lib/server/session-proxy";
+import { isSameOriginMutation } from "@/lib/server/backend-proxy-policy";
+import { getServiceBase } from "@/lib/server/service-origins";
 
 export async function POST(request: NextRequest) {
-    const { refreshToken } = getSessionCookies(request);
+  if (
+    !isSameOriginMutation(
+      request.nextUrl,
+      request.headers.get("origin"),
+      request.headers.get("sec-fetch-site"),
+    )
+  ) {
+    return NextResponse.json(
+      { message: "Cross-origin request rejected" },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
-    if (refreshToken) {
-        try {
-            await fetch(`${AUTH_BASE}/auth/logout`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken }),
-                cache: 'no-store',
-            });
-        } catch {
-            // Local logout must still clear browser cookies even if the auth
-            // service is temporarily unavailable or already revoked the token.
-        }
+  const { refreshToken } = getSessionCookies(request);
+
+  if (refreshToken) {
+    try {
+      await fetch(`${getServiceBase("auth")}/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+        cache: "no-store",
+        redirect: "manual",
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      // Local logout must still clear browser cookies even if the auth
+      // service is temporarily unavailable or already revoked the token.
     }
+  }
 
-    return clearSessionCookies(NextResponse.json({ success: true }));
+  return clearSessionCookies(NextResponse.json({ success: true }));
 }
