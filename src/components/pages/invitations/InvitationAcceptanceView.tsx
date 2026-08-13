@@ -14,7 +14,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AxiosError } from 'axios';
-import { Button, PremiumLoader } from '@/components/ui';
+import { Button, Card, PremiumLoader } from '@/components/ui';
 import {
     acceptInvitation,
     declineInvitation,
@@ -230,7 +230,7 @@ export function InvitationAcceptanceView({ token }: Props) {
             </div>
 
             {/* ── Main card ── */}
-            <div className="glass-strong" style={{ width: '100%', maxWidth: 600, borderRadius: 'var(--radius-xl)', padding: '32px 32px 28px' }}>
+            <Card strength="strong" style={{ width: '100%', maxWidth: 600 }}>
                 {/* Card header */}
                 <div style={{ marginBottom: 24 }}>
                     <div style={{
@@ -316,7 +316,7 @@ export function InvitationAcceptanceView({ token }: Props) {
                         )}
                     </>
                 ) : null}
-            </div>
+            </Card>
         </div>
     );
 }
