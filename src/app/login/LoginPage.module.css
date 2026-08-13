@@ -1,0 +1,45 @@
+/* Responsive shell for documents sign-in. */
+
+.page {
+    display: flex;
+    min-height: 100dvh;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1.25rem, 5vw, 2rem);
+}
+.content {
+    width: 100%;
+    max-width: 25rem;
+}
+.brand {
+    margin-bottom: 1.75rem;
+    text-align: center;
+}
+.brandRow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 0.5rem;
+}
+.brandMark {
+    display: flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-size: 1rem;
+    font-weight: 800;
+}
+.brandName {
+    color: var(--color-text-primary);
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+.workspace {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+}
