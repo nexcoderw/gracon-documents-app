@@ -37,6 +37,7 @@ import { EditorUserAvatarMenu } from './EditorUserAvatarMenu';
 import { EditorFindBar } from './EditorFindBar';
 import { useEditorActions } from '@/store/editor/use-editor-actions';
 import { DOCUMENT_IMPORT_ACCEPT } from '@/lib/import-document';
+import { Button } from '@/components/ui';
 
 interface DocEditorHeaderProps {
     editor: Editor | null;
@@ -280,20 +281,21 @@ export function DocEditorHeader({
                         />
                     )}
                     {canViewSignature && isLocked && (
-                        <button onClick={onViewSignature} className="ded-action-btn">
+                        <Button variant="ghost" size="sm" onClick={onViewSignature}>
                             View signature
-                        </button>
+                        </Button>
                     )}
 
                     {canShare && (
-                        <button
-                            className="ded-share-btn"
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => setShareOpen(true)}
                             title="Share document"
                         >
                             <HugeiconsIcon icon={Share01Icon} size={15} />
                             <span>Share</span>
-                        </button>
+                        </Button>
                     )}
 
                     <EditorUserAvatarMenu />
