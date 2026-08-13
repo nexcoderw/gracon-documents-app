@@ -1,0 +1,80 @@
+/* Responsive irreversible-lock confirmation dialog. */
+
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: var(--color-backdrop);
+    backdrop-filter: blur(10px);
+}
+
+.dialog {
+    display: grid;
+    width: min(100%, 32.5rem);
+    gap: 1.125rem;
+    padding: clamp(1.125rem, 4vw, 1.375rem);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-bg-solid);
+    box-shadow: var(--glass-shadow);
+}
+
+.eyebrow {
+    margin: 0 0 0.5rem;
+    color: var(--color-warning);
+    font-size: 0.8125rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.title {
+    margin: 0 0 0.5rem;
+    color: var(--color-text-primary);
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+    line-height: 1.25;
+}
+
+.copy,
+.warning {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.65;
+}
+
+.copy {
+    color: var(--color-text-secondary);
+}
+
+.warning {
+    padding: 0.875rem;
+    border: 1px solid var(--color-warning-border);
+    border-radius: var(--radius-md);
+    background: var(--color-warning-subtle);
+    color: var(--color-warning);
+    font-weight: 600;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.625rem;
+}
+
+@media (max-width: 29.999rem) {
+    .backdrop {
+        align-items: end;
+        padding: 0.75rem;
+    }
+
+    .actions {
+        flex-direction: column-reverse;
+    }
+
+    .actions > button {
+        width: 100%;
+    }
+}
