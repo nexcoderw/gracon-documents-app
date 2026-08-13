@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { uploadEditorImage } from '@/api/editor-images.api';
 import { normalizeEditorImageUrl } from '@/lib/editor-image';
+import { Button } from '@/components/ui';
+import styles from './InsertImageDialog.module.css';
 
 export interface InsertImageDialogValues {
     alt: string;
@@ -160,7 +162,7 @@ export function InsertImageDialog({
 
     return (
         <div
-            className="insert-image-dialog__backdrop"
+            className={styles.backdrop}
             role="dialog"
             aria-modal="true"
             aria-labelledby="insert-image-dialog-title"
@@ -169,7 +171,7 @@ export function InsertImageDialog({
             }}
         >
             <form
-                className="insert-image-dialog"
+                className={styles.dialog}
                 onSubmit={(event) => {
                     event.preventDefault();
                     if (activeTab === 'upload') {
@@ -183,19 +185,19 @@ export function InsertImageDialog({
                     onSubmit({ src: normalized.url, alt: alt.trim(), title: title.trim() });
                 }}
             >
-                <div className="insert-image-dialog__header">
-                    <div className="insert-image-dialog__header-icon" aria-hidden="true">
+                <div className={styles.header}>
+                    <div className={styles.headerIcon} aria-hidden="true">
                         <ImageIcon />
                     </div>
-                    <div className="insert-image-dialog__header-copy">
-                        <p className="insert-image-dialog__eyebrow">Image</p>
-                        <h2 id="insert-image-dialog-title" className="insert-image-dialog__title">
+                    <div className={styles.headerCopy}>
+                        <p className={styles.eyebrow}>Image</p>
+                        <h2 id="insert-image-dialog-title" className={styles.title}>
                             Insert image
                         </h2>
                     </div>
                     <button
                         type="button"
-                        className="insert-image-dialog__close"
+                        className={styles.close}
                         onClick={onClose}
                         disabled={uploading}
                         aria-label="Close image dialog"
@@ -206,21 +208,21 @@ export function InsertImageDialog({
                     </button>
                 </div>
 
-                <p className="insert-image-dialog__copy">
+                <p className={styles.copy}>
                     Upload a local image to private document storage or insert an existing secure hosted URL. The document stores only a stable image URL.
                 </p>
 
-                <div className="insert-image-dialog__tabs" role="tablist" aria-label="Image source">
+                <div className={styles.tabs} role="tablist" aria-label="Image source">
                     <button
                         type="button"
-                        className={`insert-image-dialog__tab${activeTab === 'upload' ? ' insert-image-dialog__tab--active' : ''}`}
+                        className={`${styles.tab}${activeTab === 'upload' ? ` ${styles.activeTab}` : ''}`}
                         onClick={() => setActiveTab('upload')}
                     >
                         Upload
                     </button>
                     <button
                         type="button"
-                        className={`insert-image-dialog__tab${activeTab === 'url' ? ' insert-image-dialog__tab--active' : ''}`}
+                        className={`${styles.tab}${activeTab === 'url' ? ` ${styles.activeTab}` : ''}`}
                         onClick={() => setActiveTab('url')}
                     >
                         Image URL
@@ -228,17 +230,17 @@ export function InsertImageDialog({
                 </div>
 
                 {activeTab === 'upload' ? (
-                    <div className="insert-image-dialog__upload-panel">
+                    <div className={styles.uploadPanel}>
                         <input
                             ref={fileInputRef}
                             type="file"
                             accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
-                            className="insert-image-dialog__file-input"
+                            className={styles.fileInput}
                             onChange={(event) => chooseLocalFile(event.target.files?.[0] ?? null)}
                         />
                         <button
                             type="button"
-                            className="insert-image-dialog__dropzone"
+                            className={styles.dropzone}
                             onClick={() => fileInputRef.current?.click()}
                             onDragOver={(event) => event.preventDefault()}
                             onDrop={(event) => {
@@ -246,7 +248,7 @@ export function InsertImageDialog({
                                 chooseLocalFile(event.dataTransfer.files?.[0] ?? null);
                             }}
                         >
-                            <span className="insert-image-dialog__dropzone-icon">
+                            <span className={styles.dropzoneIcon}>
                                 <UploadIcon />
                             </span>
                             <strong>{selectedFile ? selectedFile.name : 'Choose or drop an image'}</strong>
@@ -258,7 +260,7 @@ export function InsertImageDialog({
                         </button>
                     </div>
                 ) : (
-                    <label className={`insert-image-dialog__field${showUrlError ? ' insert-image-dialog__field--error' : ''}`}>
+                    <label className={`${styles.field}${showUrlError ? ` ${styles.fieldError}` : ''}`}>
                         <span>Image URL</span>
                         <input
                             value={src}
@@ -272,7 +274,7 @@ export function InsertImageDialog({
                             inputMode="url"
                             autoComplete="url"
                         />
-                        <small className={showUrlError ? 'insert-image-dialog__hint--error' : ''}>
+                        <small className={showUrlError ? styles.errorHint : undefined}>
                             {showUrlError
                                 ? normalized.error
                                 : 'Allowed: secure hosted image URLs. SVG and base64 images are not accepted.'}
@@ -280,7 +282,7 @@ export function InsertImageDialog({
                     </label>
                 )}
 
-                <div className="insert-image-dialog__preview">
+                <div className={styles.preview}>
                     {previewUrl ? (
                         <>
                             {/* eslint-disable-next-line @next/next/no-img-element -- Dynamic editor image preview cannot use Next/Image without domain allowlisting. */}
@@ -291,24 +293,24 @@ export function InsertImageDialog({
                                 onError={() => setPreviewStatus('error')}
                             />
                             {previewStatus === 'loading' && (
-                                <span className="insert-image-dialog__preview-status">Checking image…</span>
+                                <span className={styles.previewStatus}>Checking image…</span>
                             )}
                             {previewStatus === 'error' && (
-                                <span className="insert-image-dialog__preview-status insert-image-dialog__preview-status--error">
+                                <span className={`${styles.previewStatus} ${styles.previewError}`}>
                                     This image could not be loaded.
                                 </span>
                             )}
                         </>
                     ) : (
-                        <div className="insert-image-dialog__preview-empty">
+                        <div className={styles.previewEmpty}>
                             <ImageIcon />
                             <span>Image preview will appear here</span>
                         </div>
                     )}
                 </div>
 
-                <div className="insert-image-dialog__meta-grid">
-                    <label className="insert-image-dialog__field">
+                <div className={styles.metaGrid}>
+                    <label className={styles.field}>
                         <span>Alt text</span>
                         <input
                             value={alt}
@@ -316,7 +318,7 @@ export function InsertImageDialog({
                             placeholder="Describe the image for accessibility"
                         />
                     </label>
-                    <label className="insert-image-dialog__field">
+                    <label className={styles.field}>
                         <span>Title</span>
                         <input
                             value={title}
@@ -327,28 +329,29 @@ export function InsertImageDialog({
                 </div>
 
                 {uploadError && (
-                    <p className="insert-image-dialog__error" role="alert">
+                    <p className={styles.error} role="alert">
                         {uploadError}
                     </p>
                 )}
 
-                <div className="insert-image-dialog__footer">
+                <div className={styles.footer}>
                     <p>
                         {activeTab === 'upload'
                             ? 'Upload stores the image privately in the documents API and returns a stable render URL.'
                             : 'External images remain hosted by their original provider.'}
                     </p>
-                    <div className="insert-image-dialog__footer-actions">
-                        <button type="button" className="ded-action-btn" onClick={onClose} disabled={uploading}>
+                    <div className={styles.footerActions}>
+                        <Button type="button" variant="ghost" onClick={onClose} disabled={uploading}>
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
-                            className="ded-share-btn"
                             disabled={activeTab === 'upload' ? !canUpload : !canSubmitUrl}
+                            loading={uploading}
+                            loadingText="Uploading…"
                         >
-                            {uploading ? 'Uploading…' : 'Insert image'}
-                        </button>
+                            Insert image
+                        </Button>
                     </div>
                 </div>
             </form>
