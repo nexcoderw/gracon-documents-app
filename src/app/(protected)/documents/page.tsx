@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { toast } from '@/components/ui';
+import { Button, Card, toast } from '@/components/ui';
 import {
     autosaveDocument,
     createDocument,
@@ -210,39 +210,39 @@ export default function DocumentsPage() {
             />
 
             {/* ── Quick-create strip ── */}
-            <div className="docs-create-strip">
-                <p className="docs-create-strip__label">Create new</p>
-                <div className="docs-create-strip__row">
-                    <Link href="/documents/new" className="docs-create-item" aria-label="Create blank document">
-                        <div className="docs-create-item__thumb">
-                            <div className="docs-create-item__accent docs-create-item__accent--doc" />
-                            <div className="docs-create-item__line docs-create-item__line--h" />
-                            <div className={`docs-create-item__line ${styles.lineFull}`} />
-                            <div className={`docs-create-item__line ${styles.lineMedium}`} />
-                            <div className={`docs-create-item__line ${styles.lineWide}`} />
-                            <div className={`docs-create-item__line ${styles.lineShort}`} />
+            <div className={styles.createStrip}>
+                <p className={styles.createLabel}>Create new</p>
+                <div className={styles.createRow}>
+                    <Link href="/documents/new" className={styles.createItem} aria-label="Create blank document">
+                        <div className={styles.createThumb}>
+                            <div className={`${styles.createAccent} ${styles.documentAccent}`} />
+                            <div className={`${styles.createLine} ${styles.headingLine}`} />
+                            <div className={`${styles.createLine} ${styles.lineFull}`} />
+                            <div className={`${styles.createLine} ${styles.lineMedium}`} />
+                            <div className={`${styles.createLine} ${styles.lineWide}`} />
+                            <div className={`${styles.createLine} ${styles.lineShort}`} />
                         </div>
-                        <span className="docs-create-item__label">Blank document</span>
+                        <span className={styles.createItemLabel}>Blank document</span>
                     </Link>
 
                     <button
                         type="button"
-                        className="docs-create-item"
+                        className={styles.createItem}
                         aria-label="Import document from your device"
                         disabled={importing}
                         onClick={() => fileInputRef.current?.click()}
                     >
-                        <div className="docs-create-item__thumb">
-                            <div className="docs-create-item__accent docs-create-item__accent--import" />
+                        <div className={styles.createThumb}>
+                            <div className={`${styles.createAccent} ${styles.importAccent}`} />
                             <div className={styles.importIcon} aria-hidden="true">
                                 {importing ? '…' : '↓'}
                             </div>
-                            <div className={`docs-create-item__line docs-create-item__line--h ${styles.lineImportHeading}`} />
-                            <div className={`docs-create-item__line ${styles.lineFull}`} />
-                            <div className={`docs-create-item__line ${styles.lineImportWide}`} />
-                            <div className={`docs-create-item__line ${styles.lineImportShort}`} />
+                            <div className={`${styles.createLine} ${styles.headingLine} ${styles.lineImportHeading}`} />
+                            <div className={`${styles.createLine} ${styles.lineFull}`} />
+                            <div className={`${styles.createLine} ${styles.lineImportWide}`} />
+                            <div className={`${styles.createLine} ${styles.lineImportShort}`} />
                         </div>
-                        <span className="docs-create-item__label">
+                        <span className={styles.createItemLabel}>
                             {importing ? 'Importing…' : 'Import document'}
                         </span>
                     </button>
@@ -267,13 +267,13 @@ export default function DocumentsPage() {
 
             {/* ── Document grid ── */}
             {loading ? (
-                <div className="docs-skeleton">
+                <div className={styles.skeletonGrid} aria-label="Loading documents">
                     {Array.from({ length: 10 }).map((_, i) => (
-                        <div key={i} className="docs-skeleton__card" />
+                        <div key={i} className={styles.skeletonCard} />
                     ))}
                 </div>
             ) : loadError ? (
-                <div className={`glass ${styles.errorCard}`}>
+                <Card className={styles.errorCard}>
                     <div>
                         <p className={styles.errorTitle}>
                             Unable to load your documents
@@ -281,24 +281,24 @@ export default function DocumentsPage() {
                         <p className={styles.errorCopy}>{loadError}</p>
                     </div>
                     <div className={styles.errorActions}>
-                        <button onClick={() => void load()} className={`btn-primary ${styles.smallButton}`}>
+                        <Button onClick={() => void load()} size="sm">
                             Try again
-                        </button>
-                        <Link href="/documents/new" className={`btn-ghost ${styles.smallButton} ${styles.createLink}`}>
+                        </Button>
+                        <Link href="/documents/new" className={`${styles.actionLink} ${styles.secondaryAction}`}>
                             Create a document
                         </Link>
                     </div>
-                </div>
+                </Card>
             ) : visibleItems.length === 0 ? (
-                <div className="docs-empty">
-                    <div className="docs-empty__icon">
-                        <div className="docs-empty__icon-stripe" />
-                        <div className="docs-empty__icon-line docs-empty__icon-line--h" />
-                        <div className={`docs-empty__icon-line ${styles.lineFull}`} />
-                        <div className={`docs-empty__icon-line ${styles.lineMedium}`} />
-                        <div className={`docs-empty__icon-line ${styles.lineWide}`} />
+                <div className={styles.emptyState}>
+                    <div className={styles.emptyIcon}>
+                        <div className={styles.emptyIconStripe} />
+                        <div className={`${styles.emptyIconLine} ${styles.emptyIconHeading}`} />
+                        <div className={`${styles.emptyIconLine} ${styles.lineFull}`} />
+                        <div className={`${styles.emptyIconLine} ${styles.lineMedium}`} />
+                        <div className={`${styles.emptyIconLine} ${styles.lineWide}`} />
                     </div>
-                    <p className="docs-empty__heading">
+                    <p className={styles.emptyHeading}>
                         {starredOnly
                             ? 'No starred documents'
                             : search
@@ -309,7 +309,7 @@ export default function DocumentsPage() {
                                     ? `No ${statusFilter.toLowerCase()} documents`
                                     : 'No documents yet'}
                     </p>
-                    <p className="docs-empty__sub">
+                    <p className={styles.emptyCopy}>
                         {starredOnly
                             ? 'Star a document to add it to your favourites.'
                             : search
@@ -321,13 +321,13 @@ export default function DocumentsPage() {
                                     : 'Create your first document to get started.'}
                     </p>
                     {!search && !statusFilter && !starredOnly && (
-                        <Link href="/documents/new" className={`btn-primary ${styles.emptyCreateLink}`}>
+                        <Link href="/documents/new" className={`${styles.actionLink} ${styles.primaryAction}`}>
                             Create document
                         </Link>
                     )}
                 </div>
             ) : (
-                <div className="docs-grid">
+                <div className={styles.documentGrid}>
                     {visibleItems.map((doc) => (
                         <DocumentCard
                             key={doc.id}
@@ -342,22 +342,24 @@ export default function DocumentsPage() {
 
             {/* ── Pagination ── */}
             {!starredOnly && totalPages > 1 && (
-                <div className="docs-pagination">
-                    <button
+                <div className={styles.pagination}>
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                         disabled={page === 1}
-                        className={`btn-ghost ${styles.paginationButton}`}
                     >
                         ← Prev
-                    </button>
-                    <span className="docs-pagination__label">Page {page} of {totalPages}</span>
-                    <button
+                    </Button>
+                    <span className={styles.paginationLabel}>Page {page} of {totalPages}</span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         disabled={page === totalPages}
-                        className={`btn-ghost ${styles.paginationButton}`}
                     >
                         Next →
-                    </button>
+                    </Button>
                 </div>
             )}
 
