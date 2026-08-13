@@ -6,8 +6,9 @@ import {
     verifyDocument,
     type VerifyDocumentResponse,
 } from '@/api/documents.api';
-import { PremiumLoader } from '@/components/ui';
+import { Button, Card, Input } from '@/components/ui';
 import { VerifySignerChain } from './VerifySignerChain';
+import styles from './VerifyForm.module.css';
 
 const DOCUMENT_ID_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -84,81 +85,24 @@ export function VerifyForm() {
     }
 
     return (
-        <div
-            style={{
-                background: 'rgba(255, 255, 255, 0.82)',
-                backdropFilter: 'blur(32px)',
-                border: '1px solid rgba(255, 255, 255, 0.96)',
-                borderRadius: 'var(--radius-xl)',
-                boxShadow:
-                    '0 8px 40px rgba(91, 35, 255, 0.10), 0 2px 8px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 1)',
-                padding: 36,
-                width: '100%',
-                maxWidth: 560,
-            }}
-        >
-            <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
-                <h2
-                    style={{
-                        margin: '0 0 8px',
-                        fontSize: 22,
-                        fontWeight: 700,
-                        color: 'var(--color-text-primary)',
-                    }}
-                >
-                    Verify a Document
-                </h2>
-                <p
-                    style={{
-                        margin: 0,
-                        fontSize: 14,
-                        color: 'var(--color-text-secondary)',
-                        lineHeight: 1.6,
-                    }}
-                >
+        <Card strength="strong" padding="lg" className={styles.card}>
+            <div className={styles.header}>
+                <div className={styles.icon}>🔍</div>
+                <h2 className={styles.title}>Verify a Document</h2>
+                <p className={styles.description}>
                     Enter the document ID to confirm authenticity. No account
                     required.
                 </p>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-                <label
-                    htmlFor="document-id"
-                    style={{
-                        display: 'block',
-                        fontSize: 12,
-                        color: 'var(--color-text-muted)',
-                        marginBottom: 6,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.06em',
-                    }}
-                >
-                    Document ID
-                </label>
-                <input
+            <div className={styles.field}>
+                <Input
                     id="document-id"
+                    label="Document ID"
                     value={documentId}
                     onChange={(event) => setDocumentId(event.target.value)}
                     placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                    style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        borderRadius: 'var(--radius-md)',
-                        background: 'var(--color-bg-input)',
-                        border: '1px solid var(--color-border)',
-                        color: 'var(--color-text-primary)',
-                        fontSize: 13,
-                        fontFamily: 'monospace',
-                        outline: 'none',
-                    }}
-                    onFocus={(event) => {
-                        event.target.style.borderColor =
-                            'var(--color-border-primary)';
-                    }}
-                    onBlur={(event) => {
-                        event.target.style.borderColor = 'var(--color-border)';
-                    }}
+                    className={styles.documentId}
                     onKeyDown={(event) => {
                         if (event.key === 'Enter') {
                             event.preventDefault();
@@ -169,58 +113,24 @@ export function VerifyForm() {
             </div>
 
             {error && (
-                <div
-                    style={{
-                        background: 'var(--color-error-subtle)',
-                        border: '1px solid var(--color-error-border)',
-                        borderRadius: 'var(--radius-md)',
-                        padding: '10px 14px',
-                        fontSize: 13,
-                        color: 'var(--color-error)',
-                        marginBottom: 16,
-                    }}
-                >
+                <div role="alert" className={styles.error}>
                     {error}
                 </div>
             )}
 
             {result && (
                 <div
-                    style={{
-                        background: result.verified
-                            ? 'var(--color-success-subtle)'
-                            : 'var(--color-error-subtle)',
-                        border: `1px solid ${
-                            result.verified
-                                ? 'var(--color-success-border)'
-                                : 'var(--color-error-border)'
-                        }`,
-                        borderRadius: 'var(--radius-lg)',
-                        padding: 20,
-                        marginBottom: 20,
-                    }}
+                    className={`${styles.result} ${result.verified ? styles.successResult : styles.failureResult}`}
                 >
                     <div
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            marginBottom: result.verified ? 16 : 0,
-                        }}
+                        className={`${styles.resultHeader} ${result.verified ? styles.resultHeaderWithDetails : ''}`}
                     >
-                        <span style={{ fontSize: 28 }}>
+                        <span className={styles.resultIcon}>
                             {result.verified ? '✅' : '❌'}
                         </span>
                         <div>
                             <p
-                                style={{
-                                    margin: 0,
-                                    fontSize: 16,
-                                    fontWeight: 700,
-                                    color: result.verified
-                                        ? 'var(--color-success)'
-                                        : 'var(--color-error)',
-                                }}
+                                className={`${styles.resultTitle} ${result.verified ? styles.successText : styles.failureText}`}
                             >
                                 {result.verified
                                     ? result.title
@@ -229,14 +139,7 @@ export function VerifyForm() {
                                     : 'Document could not be verified'}
                             </p>
                             {!result.verified && result.message && (
-                                <p
-                                    style={{
-                                        margin: '4px 0 0',
-                                        fontSize: 13,
-                                        color: 'var(--color-error)',
-                                        opacity: 0.8,
-                                    }}
-                                >
+                                <p className={styles.resultMessage}>
                                     {result.message}
                                 </p>
                             )}
@@ -244,13 +147,7 @@ export function VerifyForm() {
                     </div>
 
                     {result.verified && (
-                        <div
-                            style={{
-                                borderTop:
-                                    '1px solid var(--color-success-border)',
-                                paddingTop: 16,
-                            }}
-                        >
+                        <div className={styles.details}>
                             {[
                                 { label: 'Title', value: result.title },
                                 {
@@ -275,72 +172,33 @@ export function VerifyForm() {
                                 .filter(
                                     (
                                         row,
-                                    ): row is { label: string; value: string } =>
+                                    ): row is {
+                                        label: string;
+                                        value: string;
+                                    } =>
                                         typeof row.value === 'string' &&
                                         row.value.length > 0,
                                 )
                                 .map(({ label, value }) => (
                                     <div
                                         key={label}
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            padding: '6px 0',
-                                            borderBottom:
-                                                '1px solid rgba(52,211,153,0.15)',
-                                        }}
+                                        className={styles.detailRow}
                                     >
-                                        <span
-                                            style={{
-                                                fontSize: 12,
-                                                color: 'var(--color-text-muted)',
-                                            }}
-                                        >
+                                        <span className={styles.detailLabel}>
                                             {label}
                                         </span>
-                                        <span
-                                            style={{
-                                                fontSize: 13,
-                                                fontWeight: 500,
-                                                color: 'var(--color-success)',
-                                                textAlign: 'right',
-                                            }}
-                                        >
+                                        <span className={styles.detailValue}>
                                             {value}
                                         </span>
                                     </div>
                                 ))}
 
                             {result.contentHash && (
-                                <div
-                                    style={{
-                                        marginTop: 12,
-                                        padding: '10px 12px',
-                                        background: 'rgba(52,211,153,0.08)',
-                                        borderRadius: 8,
-                                    }}
-                                >
-                                    <p
-                                        style={{
-                                            margin: '0 0 4px',
-                                            fontSize: 11,
-                                            color: 'var(--color-text-muted)',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.06em',
-                                        }}
-                                    >
+                                <div className={styles.hash}>
+                                    <p className={styles.hashLabel}>
                                         Content hash
                                     </p>
-                                    <p
-                                        style={{
-                                            margin: 0,
-                                            fontSize: 12,
-                                            color: 'var(--color-success)',
-                                            lineHeight: 1.5,
-                                            fontFamily: 'monospace',
-                                            wordBreak: 'break-all',
-                                        }}
-                                    >
+                                    <p className={styles.hashValue}>
                                         {result.contentHash}
                                     </p>
                                 </div>
@@ -355,47 +213,22 @@ export function VerifyForm() {
             )}
 
             {result ? (
-                <button
-                    onClick={reset}
-                    style={{
-                        width: '100%',
-                        background: 'var(--color-bg-input)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-md)',
-                        padding: '11px 0',
-                        fontSize: 14,
-                        color: 'var(--color-text-secondary)',
-                        cursor: 'pointer',
-                    }}
-                >
+                <Button type="button" variant="ghost" fullWidth onClick={reset}>
                     Verify Another Document
-                </button>
+                </Button>
             ) : (
-                <button
+                <Button
+                    type="button"
+                    fullWidth
                     onClick={() => {
                         void handleVerify();
                     }}
-                    disabled={loading}
-                    className="btn-primary"
-                    style={{ width: '100%' }}
+                    loading={loading}
+                    loadingText="Verifying…"
                 >
-                    {loading ? (
-                        <span
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                justifyContent: 'center',
-                            }}
-                        >
-                            <PremiumLoader size={15} color="white" />
-                            Verifying…
-                        </span>
-                    ) : (
-                        'Verify Document'
-                    )}
-                </button>
+                    Verify Document
+                </Button>
             )}
-        </div>
+        </Card>
     );
 }
