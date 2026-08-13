@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from '@/components/ui';
+import { Button, Card, toast } from '@/components/ui';
 import { listTemplates, createDocument, type Template } from '@/api/documents.api';
 import { useDocumentTitle } from '@/lib/hooks/useDocumentTitle';
 import styles from './templates-page.module.css';
@@ -74,13 +74,13 @@ export default function TemplatesPage() {
             {loading ? (
                 <div className={styles.grid}>
                     {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className={`glass ${styles.skeletonCard}`} />
+                        <Card key={i} padding="none" className={styles.skeletonCard} />
                     ))}
                 </div>
             ) : (
                 <div className={styles.grid}>
                     {filtered.map(t => (
-                        <div key={t.id} className={`glass ${styles.templateCard}`}>
+                        <Card key={t.id} className={styles.templateCard}>
                             <div className={styles.templateHeader}>
                                 <span className={styles.templateIcon}>📄</span>
                                 <span className={styles.categoryBadge}>
@@ -97,15 +97,15 @@ export default function TemplatesPage() {
                                 <span className={styles.usageCount}>
                                     Used {t.usageCount.toLocaleString()} times
                                 </span>
-                                <button
+                                <Button
                                     onClick={() => handleUse(t.id)}
                                     disabled={creating === t.id}
-                                    className={`btn-primary ${styles.useButton}`}
+                                    size="sm"
                                 >
                                     {creating === t.id ? 'Creating…' : 'Use →'}
-                                </button>
+                                </Button>
                             </div>
-                        </div>
+                        </Card>
                     ))}
                 </div>
             )}
