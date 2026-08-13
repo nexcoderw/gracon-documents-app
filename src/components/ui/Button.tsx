@@ -1,12 +1,14 @@
+/** Shared accessible action button for non-printable document chrome. */
 'use client';
 
 import { ButtonHTMLAttributes, forwardRef, ReactNode } from 'react';
 import { PremiumLoader } from './Loader';
+import styles from './Button.module.css';
 
-type ButtonVariant = 'primary' | 'ghost';
-type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'ghost' | 'danger';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: ButtonVariant;
     size?: ButtonSize;
     loading?: boolean;
@@ -14,14 +16,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     leftIcon?: ReactNode;
     rightIcon?: ReactNode;
     fullWidth?: boolean;
+    iconOnly?: boolean;
 }
 
-const sizeStyles: Record<ButtonSize, React.CSSProperties> = {
-    sm: { padding: '6px 16px', fontSize: 12, borderRadius: 9999 },
-    md: { padding: '9px 22px', fontSize: 12, borderRadius: 9999 },
-    lg: { padding: '11px 28px', fontSize: 12, borderRadius: 9999 },
-};
-
+/** Renders a consistently styled button with loading and icon states. */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     (
         {
@@ -32,9 +30,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             leftIcon,
             rightIcon,
             fullWidth = false,
+            iconOnly = false,
             children,
             disabled,
-            style,
+            className = '',
+            type = 'button',
             ...rest
         },
         ref,
@@ -44,34 +44,40 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         return (
             <button
                 ref={ref}
-                className={variant === 'primary' ? 'btn-primary' : 'btn-ghost'}
+                type={type}
+                className={[
+                    styles.button,
+                    styles[variant],
+                    styles[size],
+                    fullWidth ? styles.fullWidth : '',
+                    iconOnly ? styles.iconOnly : '',
+                    className,
+                ]
+                    .filter(Boolean)
+                    .join(' ')}
                 disabled={isDisabled}
                 aria-busy={loading}
-                style={{
-                    ...sizeStyles[size],
-                    width: fullWidth ? '100%' : undefined,
-                    ...style,
-                }}
                 {...rest}
             >
                 {!loading && leftIcon && (
-                    <span
-                        aria-hidden="true"
-                        style={{ flexShrink: 0, display: 'flex' }}
-                    >
+                    <span aria-hidden="true" className={styles.icon}>
                         {leftIcon}
                     </span>
                 )}
 
-                {loading && <PremiumLoader size={15} color="white" />}
+                {loading && (
+                    <PremiumLoader
+                        size={15}
+                        color={variant === 'primary' ? 'white' : 'primary'}
+                    />
+                )}
 
-                <span>{loading && loadingText ? loadingText : children}</span>
+                <span className={styles.label}>
+                    {loading && loadingText ? loadingText : children}
+                </span>
 
                 {!loading && rightIcon && (
-                    <span
-                        aria-hidden="true"
-                        style={{ flexShrink: 0, display: 'flex' }}
-                    >
+                    <span aria-hidden="true" className={styles.icon}>
                         {rightIcon}
                     </span>
                 )}
