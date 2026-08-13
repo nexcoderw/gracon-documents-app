@@ -6,6 +6,8 @@
  */
 'use client';
 
+import { Button } from '@/components/ui';
+
 export type SigningActionStatus =
     | 'checking'
     | 'ready'
@@ -40,17 +42,17 @@ export function DocEditorSignatureAction({
 }: DocEditorSignatureActionProps) {
     if (canFinalise) {
         return (
-            <button onClick={onFinalise} className="ded-action-btn ded-action-btn--primary">
+            <Button size="sm" onClick={onFinalise}>
                 Finalise document
-            </button>
+            </Button>
         );
     }
 
     if (canLock) {
         return (
-            <button onClick={onLock} className="ded-action-btn ded-action-btn--primary">
+            <Button size="sm" onClick={onLock}>
                 Lock document
-            </button>
+            </Button>
         );
     }
 
@@ -60,47 +62,49 @@ export function DocEditorSignatureAction({
 
     if (signingStatus === 'checking') {
         return (
-            <button className="ded-action-btn" disabled>
+            <Button variant="ghost" size="sm" disabled loading loadingText="Checking signing…">
                 Checking signing…
-            </button>
+            </Button>
         );
     }
 
     if (signingStatus === 'needs_identity_verification') {
         return (
-            <button
+            <Button
+                variant="ghost"
+                size="sm"
                 onClick={onCompleteIdentityVerification}
-                className="ded-action-btn ded-action-btn--certificate"
                 title="Complete identity verification in the main app"
             >
                 Verify identity
-            </button>
+            </Button>
         );
     }
 
     if (signingStatus === 'needs_certificate') {
         return (
-            <button
+            <Button
+                variant="ghost"
+                size="sm"
                 onClick={onApplyForDigitalSignature}
-                className="ded-action-btn ded-action-btn--certificate"
                 title="Open your digital signature setup in the main app"
             >
                 Set up signature
-            </button>
+            </Button>
         );
     }
 
     if (signingStatus !== 'ready') {
         return (
-            <button className="ded-action-btn" disabled>
+            <Button variant="ghost" size="sm" disabled>
                 Signing unavailable
-            </button>
+            </Button>
         );
     }
 
     return (
-        <button onClick={onSign} className="ded-action-btn ded-action-btn--primary">
+        <Button size="sm" onClick={onSign}>
             Sign document
-        </button>
+        </Button>
     );
 }
