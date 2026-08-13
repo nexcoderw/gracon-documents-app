@@ -181,6 +181,7 @@ same-origin proxy routes, CSP headers, or app security workflow checks.
 - Prefer `DocumentLoadingState` for editor/document loading surfaces instead of creating new ad hoc spinners. Give each usage clear context-specific `message` and `detail` text.
 - Keep risky renderers behind surface-level error boundaries. The live editor and print preview must recover independently and should remount only the failed surface.
 - Prefer scoped CSS modules for route/component-specific styling. `globals.css` should be reserved for design tokens, shared primitives, app shell rules, editor document geometry, and truly global utilities.
+- Shared `Button`, `Input`, `Card`, and loader presentation is component-owned; route metadata and indexing rules live in [`docs/seo.md`](./docs/seo.md).
 - Document cards are styled through `DocumentCard.module.css`; do not add new `doc-card` globals.
 - Document comments are styled through `DocumentCommentsPanel.module.css`; do not add new `doc-comments` globals.
 - Signing progress is styled through `DocumentSigningProgressPanel.module.css`; keep it independent from document canvas geometry.
