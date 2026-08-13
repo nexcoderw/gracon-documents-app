@@ -1,68 +1,26 @@
+/** Private documents-workspace sign-in route. */
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { LoginForm } from '@/components/pages/auth/login';
+import styles from './LoginPage.module.css';
 
 export const metadata: Metadata = {
     title: 'Sign In',
     description: 'Sign in to access your documents workspace.',
+    robots: { index: false, follow: false, nocache: true },
 };
 
+/** Renders the calm, responsive documents sign-in surface. */
 export default function LoginPage() {
     return (
-        <div
-            style={{
-                minHeight: '100dvh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '32px 24px',
-            }}
-        >
-            <div style={{ width: '100%', maxWidth: 400 }}>
-                <div style={{ textAlign: 'center', marginBottom: 28 }}>
-                    <div
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 10,
-                            marginBottom: 8,
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 10,
-                                background: 'var(--color-primary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#fff',
-                                fontWeight: 800,
-                                fontSize: 16,
-                            }}
-                        >
-                            G
-                        </div>
-                        <span
-                            style={{
-                                fontSize: 18,
-                                fontWeight: 700,
-                                color: 'var(--color-text-primary)',
-                            }}
-                        >
-                            Gracon 360
-                        </span>
+        <div className={styles.page}>
+            <div className={styles.content}>
+                <div className={styles.brand}>
+                    <div className={styles.brandRow}>
+                        <div className={styles.brandMark}>G</div>
+                        <span className={styles.brandName}>Gracon 360</span>
                     </div>
-                    <p
-                        style={{
-                            margin: 0,
-                            fontSize: 13,
-                            color: 'var(--color-text-muted)',
-                        }}
-                    >
-                        Documents Workspace
-                    </p>
+                    <p className={styles.workspace}>Documents Workspace</p>
                 </div>
 
                 <Suspense>
