@@ -10,6 +10,8 @@ Purpose: keep the document workspace focused, accessible, responsive, and visual
 - Application chrome uses existing CSS variables and shared tokens; do not hardcode hex values in components.
 - Do not add background gradients.
 - Use scoped `.glass`/`.glass-strong` surfaces only where the existing cross-app design system calls for glass chrome; never apply translucent glass to printable paper.
+- Shared buttons, inputs, cards, and loaders own their styles in sibling CSS Modules; `globals.css` must not define their component presentation.
+- Route and feature layout belongs in sibling CSS Modules, while inline styles are reserved for computed paper geometry and user-selected editor values.
 - Use DM Sans through the existing font configuration.
 - New motion must honor reduced-motion preferences.
 
@@ -25,12 +27,12 @@ Purpose: keep the document workspace focused, accessible, responsive, and visual
 
 Verify every changed surface at:
 
-| Breakpoint | Width | Expected behavior |
-| --- | ---: | --- |
-| Mobile | 320–767px | stacked controls, touch-safe actions, bounded canvas scrolling, near-full-screen dialogs |
-| Tablet | 768–1023px | compact toolbar/shell, collapsible rails, readable document access |
-| Laptop | 1024–1439px | stable rulers/canvas with constrained side rails |
-| Desktop | 1440px+ | full workspace without stretching controls excessively |
+| Breakpoint |       Width | Expected behavior                                                                        |
+| ---------- | ----------: | ---------------------------------------------------------------------------------------- |
+| Mobile     |   320–767px | stacked controls, touch-safe actions, bounded canvas scrolling, near-full-screen dialogs |
+| Tablet     |  768–1023px | compact toolbar/shell, collapsible rails, readable document access                       |
+| Laptop     | 1024–1439px | stable rulers/canvas with constrained side rails                                         |
+| Desktop    |     1440px+ | full workspace without stretching controls excessively                                   |
 
 Rules:
 
