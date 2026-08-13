@@ -12,6 +12,7 @@
 import { HugeiconsIcon } from '@hugeicons/react';
 import { StarIcon, SortingIcon } from '@hugeicons/core-free-icons';
 import type { DocumentListScope, DocumentStatus } from '@/api/documents.api';
+import styles from './DocumentsFilters.module.css';
 
 export const STATUS_FILTER_TABS = [null, 'DRAFT', 'FINALISED', 'SIGNED', 'LOCKED'] as const;
 export type StatusFilter = DocumentStatus | null;
@@ -99,15 +100,16 @@ export function DocumentsFilters({
     }
 
     return (
-        <div className="docs-filters">
+        <div className={styles.filters}>
             {/* ── Left: tab strip + starred tab ── */}
-            <div className="docs-filters__tabs" aria-label="Filter documents">
+            <div className={styles.tabs} aria-label="Filter documents">
                 {/* Access-scope tabs */}
-                <div className="docs-filters__scope" role="tablist" aria-label="Filter by access">
+                <div className={styles.scope} role="tablist" aria-label="Filter by access">
                     {ACCESS_SCOPE_TABS.map((tab) => {
                         const isActive = accessScope === tab.value;
                         return (
                             <button
+                                type="button"
                                 key={tab.value}
                                 role="tab"
                                 aria-selected={isActive}
@@ -117,7 +119,7 @@ export function DocumentsFilters({
                                         onAccessScopeChange(tab.value);
                                     }
                                 }}
-                                className={`docs-filter-tab docs-filter-tab--scope${isActive ? ' docs-filter-tab--active' : ''}`}
+                                className={`${styles.tab} ${styles.scopeTab}${isActive ? ` ${styles.active}` : ''}`}
                             >
                                 {tab.label}
                             </button>
@@ -126,14 +128,15 @@ export function DocumentsFilters({
                 </div>
 
                 {/* Divider */}
-                <span className="docs-filters__divider" aria-hidden="true" />
+                <span className={styles.divider} aria-hidden="true" />
 
                 {/* Status tabs */}
-                <div className="docs-filters__status" role="tablist" aria-label="Filter by document status">
+                <div className={styles.status} role="tablist" aria-label="Filter by document status">
                     {STATUS_FILTER_TABS.map((s) => {
                         const isActive = !starredOnly && statusFilter === s;
                         return (
                             <button
+                                type="button"
                                 key={s ?? 'all'}
                                 role="tab"
                                 aria-selected={isActive}
@@ -144,7 +147,7 @@ export function DocumentsFilters({
                                         onStatusChange(s);
                                     }
                                 }}
-                                className={`docs-filter-tab${isActive ? ' docs-filter-tab--active' : ''}`}
+                                className={`${styles.tab}${isActive ? ` ${styles.active}` : ''}`}
                             >
                                 {s ? STATUS_LABELS[s as DocumentStatus] : 'All'}
                             </button>
@@ -153,10 +156,11 @@ export function DocumentsFilters({
                 </div>
 
                 {/* Divider */}
-                <span className="docs-filters__divider" aria-hidden="true" />
+                <span className={styles.divider} aria-hidden="true" />
 
                 {/* Starred tab */}
                 <button
+                    type="button"
                     aria-pressed={starredOnly}
                     onClick={() => {
                         // Only clear the status URL param if one is currently set —
@@ -164,31 +168,31 @@ export function DocumentsFilters({
                         if (statusFilter !== null) onStatusChange(null);
                         onStarredChange(!starredOnly);
                     }}
-                    className={`docs-filter-tab docs-filter-tab--star${starredOnly ? ' docs-filter-tab--active docs-filter-tab--star-active' : ''}`}
+                    className={`${styles.tab} ${styles.star}${starredOnly ? ` ${styles.active} ${styles.starActive}` : ''}`}
                 >
                     <HugeiconsIcon
                         icon={StarIcon}
                         size={12}
-                        color={starredOnly ? '#f59e0b' : 'currentColor'}
-                        fill={starredOnly ? '#f59e0b' : 'none'}
+                        color="currentColor"
+                        fill={starredOnly ? 'currentColor' : 'none'}
                         strokeWidth={2}
                     />
                     Starred
                     {starredCount > 0 && (
-                        <span className="docs-filter-tab__badge">{starredCount}</span>
+                        <span className={styles.badge}>{starredCount}</span>
                     )}
                 </button>
             </div>
 
             {/* ── Right: sort + count ── */}
-            <div className="docs-filters__right">
+            <div className={styles.right}>
                 {/* Sort selector */}
-                <div className="docs-sort">
+                <div className={styles.sort}>
                     <HugeiconsIcon icon={SortingIcon} size={13} color="var(--color-text-muted)" />
                     <select
                         value={sort}
                         onChange={(e) => onSortChange(e.target.value as SortOption)}
-                        className="docs-sort__select"
+                        className={styles.select}
                         aria-label="Sort documents"
                     >
                         {SORT_OPTIONS.map((opt) => (
@@ -197,7 +201,7 @@ export function DocumentsFilters({
                     </select>
                 </div>
 
-                <p className="docs-filters__count">{countLabel()}</p>
+                <p className={styles.count}>{countLabel()}</p>
             </div>
         </div>
     );
