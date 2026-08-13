@@ -19,7 +19,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' http://localhost:3000 http://localhost:3002 http://localhost:3005 http://localhost:4000 http://localhost:4002 https:",
+  "connect-src 'self'",
   "media-src 'self' blob: https:",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
@@ -32,7 +32,8 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), display-capture=()",
+    value:
+      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), display-capture=()",
   },
 ];
 
