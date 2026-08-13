@@ -8,6 +8,7 @@ import { DEFAULT_DOCUMENT_LAYOUT, type DocumentLayout } from '@/lib/document-lay
 import { buildDocumentLayoutStyle } from '@/lib/document-layout';
 import { PagedDocumentCanvas } from './PagedDocumentCanvas';
 import type { CommentAnchorInput } from '@/store/editor/comment-anchor-extension';
+import { Button } from '@/components/ui';
 import styles from './DocumentPrintPreviewDialog.module.css';
 
 interface DocumentPrintPreviewDialogProps {
@@ -205,14 +206,14 @@ export function DocumentPrintPreviewDialog({
                     >
                         Print
                     </button>
-                    <button
+                    <Button
                         type="button"
-                        className="btn-primary"
-                        disabled={savingPdf}
+                        loading={savingPdf}
+                        loadingText="Preparing..."
                         onClick={() => { void handleSavePdf(); }}
                     >
-                        {savingPdf ? 'Preparing...' : 'Save PDF'}
-                    </button>
+                        Save PDF
+                    </Button>
                 </div>
             </div>
             <div className={styles.body}>
