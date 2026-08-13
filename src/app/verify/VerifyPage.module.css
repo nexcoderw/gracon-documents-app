@@ -1,0 +1,50 @@
+/* Public document-verification page shell. */
+
+.page {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1.25rem, 5vw, 2rem);
+}
+.brand {
+    margin-bottom: clamp(1.75rem, 5vw, 2.5rem);
+    text-align: center;
+}
+.brandRow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 0.75rem;
+}
+.brandMark {
+    display: flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border-primary);
+    border-radius: var(--radius-sm);
+    background: var(--color-primary-subtle);
+    color: var(--color-text-primary);
+    font-size: 1.125rem;
+}
+.brandName {
+    color: var(--color-text-primary);
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+.tagline {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+}
+.assurance {
+    max-width: 28rem;
+    margin: 2rem 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    text-align: center;
+}
