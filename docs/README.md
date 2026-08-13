@@ -13,9 +13,10 @@ Read the root `AGENTS.md`, [`../SECURITY.md`](../SECURITY.md), this file, and th
 5. [`editor-canvas.md`](./editor-canvas.md) — TipTap schema, autosave, layout, pagination, rulers, import/export, images, and cleanup.
 6. [`signing-invitations.md`](./signing-invitations.md) — sharing, invitation gates, readiness, finalisation, signing, evidence, and owner lock.
 7. [`ui-design.md`](./ui-design.md) — document workspace, loading/recovery, responsive behavior, accessibility, and feedback.
-8. [`testing.md`](./testing.md) — required security, regression, lint, test, build, and manual verification.
-9. [`documentation.md`](./documentation.md) — documentation ownership and update triggers.
-10. [`git.md`](./git.md) — mandatory one-file-per-commit handoff format.
+8. [`seo.md`](./seo.md) — public verification metadata and private-route indexing rules.
+9. [`testing.md`](./testing.md) — required security, regression, lint, test, build, and manual verification.
+10. [`documentation.md`](./documentation.md) — documentation ownership and update triggers.
+11. [`git.md`](./git.md) — mandatory one-file-per-commit handoff format.
 
 Read [`gracon-owned-pagination-architecture.md`](./gracon-owned-pagination-architecture.md) for any change involving page measurement, automatic or manual breaks, outlines, repeated page chrome, footnotes, table of contents, print preview, or export capture.
 
