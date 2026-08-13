@@ -7,11 +7,7 @@
 
 .surfaceFallbackPreview {
     min-height: calc(100vh - 112px);
-    background:
-        linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-        rgba(10, 10, 18, 0.42);
-    background-size: 48px 48px, 48px 48px, auto;
+    background: var(--color-backdrop);
 }
 
 .panel {
