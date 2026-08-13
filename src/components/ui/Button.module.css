@@ -1,0 +1,109 @@
+/* Shared document-app button presentation. */
+
+.button {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    outline: none;
+    text-decoration: none;
+    user-select: none;
+    white-space: nowrap;
+    transition:
+        transform 120ms ease,
+        box-shadow 120ms ease,
+        background-color 120ms ease,
+        border-color 120ms ease;
+}
+
+.button:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+    box-shadow: none;
+    transform: none;
+}
+.button:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+}
+.primary {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    box-shadow: var(--btn-shadow-rest);
+}
+.primary:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+    box-shadow: var(--btn-shadow-hover);
+    transform: translateY(-2px);
+}
+.primary:active:not(:disabled) {
+    background: var(--color-primary-active);
+    box-shadow: var(--btn-shadow-active);
+    transform: translateY(3px);
+}
+.ghost {
+    border: 1px solid var(--color-border);
+    background: var(--color-primary-subtle);
+    color: var(--color-text-primary);
+    box-shadow: 0 1px 3px var(--color-primary-subtle);
+}
+.ghost:hover:not(:disabled) {
+    border-color: var(--color-border-hover);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    transform: translateY(-1px);
+}
+.ghost:active:not(:disabled) {
+    transform: translateY(1px);
+}
+.danger {
+    border: 1px solid var(--color-error-border);
+    background: var(--color-error-subtle);
+    color: var(--color-error);
+}
+.danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-error) 14%, transparent);
+}
+.sm {
+    padding: 0.5rem 1rem;
+}
+.md {
+    padding: 0.625rem 1.375rem;
+}
+.lg {
+    padding: 0.75rem 1.75rem;
+}
+.fullWidth {
+    width: 100%;
+}
+.iconOnly {
+    width: 2.75rem;
+    padding: 0;
+}
+.icon {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+}
+.label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (min-width: 48rem) {
+    .button {
+        min-height: 2.375rem;
+    }
+    .iconOnly {
+        width: 2.375rem;
+    }
+}
