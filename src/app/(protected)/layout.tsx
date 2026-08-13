@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { fetchCurrentUser, redirectToLogin } from '@/lib/session';
 import { DocsHeader } from '@/components/layout/DocsHeader';
 import { DocumentLoadingState } from '@/components/editor/DocumentLoadingState';
+import { Button, Card } from '@/components/ui';
 import styles from './layout.module.css';
 
 // The user profile type — matches what app/app's /api/me returns
@@ -114,9 +115,6 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     useEffect(() => {
         let ignore = false;
 
-        setLoading(true);
-        setSessionError(null);
-
         fetchCurrentUser().then((result) => {
             if (ignore) return;
 
@@ -165,7 +163,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
     if (sessionError) {
         return (
             <div className={styles.errorShell}>
-                <div className={`glass-strong animate-scale-in ${styles.errorCard}`}>
+                <Card strength="strong" className={styles.errorCard}>
                     <div>
                         <p className={styles.errorTitle}>
                             Unable to restore your session
@@ -176,24 +174,29 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
                     </div>
 
                     <div className={styles.errorActions}>
-                        <button
-                            onClick={() => setRetryKey((value) => value + 1)}
-                            className={`btn-primary ${styles.errorAction}`}
+                        <Button
+                            onClick={() => {
+                                setLoading(true);
+                                setSessionError(null);
+                                setRetryKey((value) => value + 1);
+                            }}
+                            className={styles.errorAction}
                         >
                             Try again
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="ghost"
                             onClick={() => {
                                 const intendedPath =
                                     `${window.location.pathname}${window.location.search}${window.location.hash}`;
                                 redirectToLogin(intendedPath);
                             }}
-                            className={`btn-ghost ${styles.errorAction}`}
+                            className={styles.errorAction}
                         >
                             Sign in again
-                        </button>
+                        </Button>
                     </div>
-                </div>
+                </Card>
             </div>
         );
     }
