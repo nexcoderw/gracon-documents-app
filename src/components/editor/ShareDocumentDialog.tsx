@@ -29,7 +29,7 @@ import {
     type CollaboratorPermission,
     type InvitationVerificationRequirement,
 } from '@/api/documents.api';
-import { toast } from '@/components/ui';
+import { Button, toast } from '@/components/ui';
 import { ShareDocumentAuditLog } from './ShareDocumentAuditLog';
 import { ShareDocumentAccessManager } from './ShareDocumentAccessManager';
 import styles from './share-document-dialog.module.css';
@@ -706,7 +706,7 @@ export function ShareDocumentDialog({
                                                     <div className={styles.check} aria-hidden="true">
                                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                                             <circle cx="8" cy="8" r="8" fill="var(--color-primary)" />
-                                                            <path d="M4.5 8l2.5 2.5 4.5-5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                            <path d="M4.5 8l2.5 2.5 4.5-5" stroke="var(--color-on-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                                         </svg>
                                                     </div>
                                                 )}
@@ -742,7 +742,7 @@ export function ShareDocumentDialog({
 
                 {/* ── People tab ── */}
                 {activeTab === 'people' && (
-                    <div className={`${styles.body} share-dialog__body--access`}>
+                    <div className={`${styles.body} ${styles.bodyAccess}`}>
                         <ShareDocumentAccessManager
                             documentId={documentId}
                             canGrantManageAccess={canGrantManageAccess}
@@ -755,7 +755,7 @@ export function ShareDocumentDialog({
 
                 {/* ── Activity tab ── */}
                 {canGrantManageAccess && activeTab === 'activity' && (
-                    <div className={`${styles.body} share-dialog__body--access`}>
+                    <div className={`${styles.body} ${styles.bodyAccess}`}>
                         <ShareDocumentAuditLog
                             documentId={documentId}
                             refreshKey={activityRefreshKey}
@@ -767,13 +767,15 @@ export function ShareDocumentDialog({
                 {/* ── Footer ── */}
                 <div className={styles.footer}>
                     <p className={styles.footerNote}>{footerNote}</p>
-                    <button
-                        className={styles.doneBtn}
+                    <Button
+                        size="sm"
                         onClick={isSendMode ? handleSendInvitation : onClose}
                         disabled={shareLoading}
+                        loading={shareLoading}
+                        loadingText="Sending…"
                     >
-                        {isSendMode ? (shareLoading ? 'Sending…' : 'Send invitation') : 'Done'}
-                    </button>
+                        {isSendMode ? 'Send invitation' : 'Done'}
+                    </Button>
                 </div>
             </div>
         </div>
