@@ -7,24 +7,24 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from '@/components/ui';
+import { Button, toast } from '@/components/ui';
 import { useDocumentTitle } from '@/lib/hooks/useDocumentTitle';
 import {
     createDocument,
     listTemplates,
     type Template,
 } from '@/api/documents.api';
+import styles from './NewDocumentPage.module.css';
 
 export default function NewDocumentPage() {
     useDocumentTitle('New Document');
 
     const router = useRouter();
     const [templates, setTemplates] = useState<Template[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
 
     useEffect(() => {
-        setLoading(true);
         listTemplates({ type: 'RICH_TEXT' })
             .then(setTemplates)
             .catch(() => {
@@ -47,48 +47,46 @@ export default function NewDocumentPage() {
     }
 
     return (
-        <div className="animate-fade-up" style={{ maxWidth: 800 }}>
-            <div style={{ marginBottom: 32 }}>
-                <h1 style={{ margin: '0 0 6px', fontSize: 24, fontWeight: 700, color: 'var(--color-text-primary)', letterSpacing: '-0.02em' }}>
+        <div className={styles.page}>
+            <div className={styles.header}>
+                <h1 className={styles.title}>
                     New Document
                 </h1>
-                <p style={{ margin: 0, fontSize: 14, color: 'var(--color-text-secondary)' }}>
+                <p className={styles.subtitle}>
                     Start a rich text document from a blank page or a template.
                 </p>
             </div>
 
             {/* Blank option */}
-            <div style={{ marginBottom: 24 }}>
-                <button
+            <div>
+                <Button
                     onClick={() => handleCreate()}
                     disabled={creating}
-                    className="btn-primary"
-                    style={{ width: '100%', padding: '14px 0', fontSize: 14 }}
+                    fullWidth
+                    size="lg"
+                    loading={creating}
+                    loadingText="Creating…"
                 >
-                    {creating ? '⏳ Creating…' : 'Start with Blank Document'}
-                </button>
+                    Start with Blank Document
+                </Button>
             </div>
 
             {/* Templates */}
             {!loading && templates.length > 0 && (
-                <>
-                    <h2 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                <section className={styles.templateSection}>
+                    <h2 className={styles.sectionTitle}>
                         Or start from a template
                     </h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-                        {templates.map(t => (
-                            <button key={t.id} onClick={() => handleCreate(t.id)} disabled={creating}
-                                className="glass" style={{ padding: 20, borderRadius: 'var(--radius-lg)', textAlign: 'left', cursor: 'pointer', border: '1px solid var(--color-border)', transition: 'all 150ms ease' }}
-                                onMouseEnter={e => { if (creating) return; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-border-primary)'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(91,35,255,0.04)'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--color-border)'; (e.currentTarget as HTMLButtonElement).style.background = 'var(--glass-bg)'; }}
-                            >
-                                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 6 }}>{t.name}</div>
-                                <div style={{ fontSize: 12, color: 'var(--color-text-muted)', lineHeight: 1.4 }}>{t.description}</div>
-                                <div style={{ marginTop: 10, fontSize: 11, color: 'var(--color-primary)', fontWeight: 600 }}>Use template →</div>
+                    <div className={styles.grid}>
+                        {templates.map((template) => (
+                            <button key={template.id} onClick={() => handleCreate(template.id)} disabled={creating} className={styles.template}>
+                                <div className={styles.templateName}>{template.name}</div>
+                                <div className={styles.templateDescription}>{template.description}</div>
+                                <div className={styles.templateAction}>Use template →</div>
                             </button>
                         ))}
                     </div>
-                </>
+                </section>
             )}
         </div>
     );
