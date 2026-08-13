@@ -8,6 +8,8 @@
  * link will appear in the document before submission.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '@/components/ui';
+import styles from './InsertLinkDialog.module.css';
 
 export interface InsertLinkDialogValues {
     text: string;
@@ -113,9 +115,9 @@ export function InsertLinkDialog({
     const urlInputRef = useRef<HTMLInputElement>(null);
     const textInputRef = useRef<HTMLInputElement>(null);
 
-    // Sync draft values and reset interaction state whenever the dialog opens.
-    // Intentional single-dep: we only want to reset when open transitions to true.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Sync externally selected link values whenever the dialog is opened or the
+    // editor selection changes while it remains open.
+    /* eslint-disable react-hooks/set-state-in-effect -- Draft state intentionally resets from the current editor selection when this modal opens. */
     useEffect(() => {
         if (!open) return;
         setDraftText(text);
@@ -129,7 +131,8 @@ export function InsertLinkDialog({
                 urlInputRef.current?.focus();
             }
         }, 0);
-    }, [open]);
+    }, [open, text, url]);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     useEffect(() => {
         if (!open) return undefined;
@@ -152,7 +155,7 @@ export function InsertLinkDialog({
 
     return (
         <div
-            className="insert-link-dialog__backdrop"
+            className={styles.backdrop}
             role="dialog"
             aria-modal="true"
             aria-labelledby="insert-link-dialog-title"
@@ -161,28 +164,28 @@ export function InsertLinkDialog({
             }}
         >
             <form
-                className="insert-link-dialog"
+                className={styles.dialog}
                 onSubmit={(event) => {
                     event.preventDefault();
                     onSubmit({ text: draftText, url: draftUrl });
                 }}
             >
                 {/* ── Header ── */}
-                <div className="insert-link-dialog__header">
-                    <div className="insert-link-dialog__header-icon" aria-hidden="true">
+                <div className={styles.header}>
+                    <div className={styles.headerIcon} aria-hidden="true">
                         {linkType === 'email' ? <MailIcon /> : <LinkIcon />}
                     </div>
-                    <div className="insert-link-dialog__header-copy">
-                        <p className="insert-link-dialog__eyebrow">
+                    <div className={styles.headerCopy}>
+                        <p className={styles.eyebrow}>
                             {linkType === 'email' ? 'Email link' : 'Hyperlink'}
                         </p>
-                        <h2 id="insert-link-dialog-title" className="insert-link-dialog__title">
+                        <h2 id="insert-link-dialog-title" className={styles.title}>
                             {mode === 'edit' ? 'Edit link' : 'Add a link'}
                         </h2>
                     </div>
                     <button
                         type="button"
-                        className="insert-link-dialog__close"
+                        className={styles.close}
                         onClick={onClose}
                         aria-label="Close link dialog"
                     >
@@ -192,28 +195,28 @@ export function InsertLinkDialog({
                     </button>
                 </div>
 
-                <p className="insert-link-dialog__copy">
+                <p className={styles.copy}>
                     Enter a web address or email. The display text controls what readers see in the document.
                 </p>
 
                 {/* ── URL field ── */}
                 <label
                     className={[
-                        'insert-link-dialog__field',
-                        isValidUrl ? 'insert-link-dialog__field--valid' : '',
-                        showInlineError ? 'insert-link-dialog__field--error' : '',
+                        styles.field,
+                        isValidUrl ? styles.valid : '',
+                        showInlineError ? styles.invalid : '',
                     ].filter(Boolean).join(' ')}
                 >
-                    <span className="insert-link-dialog__field-label">
+                    <span className={styles.fieldLabel}>
                         URL or email address
                         {linkType && (
-                            <span className={`insert-link-dialog__type-badge insert-link-dialog__type-badge--${linkType}`}>
+                            <span className={`${styles.typeBadge}${linkType === 'email' ? ` ${styles.emailBadge}` : ''}`}>
                                 {linkType === 'email' ? 'Email' : 'Web link'}
                             </span>
                         )}
                     </span>
-                    <div className="insert-link-dialog__input-wrap">
-                        <span className="insert-link-dialog__input-icon">
+                    <div className={styles.inputWrap}>
+                        <span className={styles.inputIcon}>
                             {linkType === 'email' ? <MailIcon /> : <LinkIcon />}
                         </span>
                         <input
@@ -230,53 +233,53 @@ export function InsertLinkDialog({
                             aria-describedby={showInlineError ? 'insert-link-url-error' : undefined}
                         />
                         {isValidUrl && (
-                            <span className="insert-link-dialog__input-check">
+                            <span className={styles.inputCheck}>
                                 <CheckIcon />
                             </span>
                         )}
                     </div>
                     {showInlineError && (
-                        <small id="insert-link-url-error" className="insert-link-dialog__field-hint insert-link-dialog__field-hint--error">
+                        <small id="insert-link-url-error" className={`${styles.hint} ${styles.errorHint}`}>
                             Please enter a valid URL (https://…) or email address.
                         </small>
                     )}
                 </label>
 
                 {/* ── Display text field ── */}
-                <label className="insert-link-dialog__field">
-                    <span className="insert-link-dialog__field-label">Display text</span>
+                <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Display text</span>
                     <input
                         ref={textInputRef}
                         value={draftText}
                         onChange={(event) => setDraftText(event.target.value)}
                         placeholder="Text shown in the document"
                     />
-                    <small className="insert-link-dialog__field-hint">
+                    <small className={styles.hint}>
                         Leave blank to display the URL itself.
                     </small>
                 </label>
 
                 {/* ── Inline preview ── */}
                 {isValidUrl && previewLabel && (
-                    <div className="insert-link-dialog__preview" aria-label="Link preview">
-                        <span className="insert-link-dialog__preview-label">Preview</span>
-                        <span className="insert-link-dialog__preview-link">{previewLabel}</span>
+                    <div className={styles.preview} aria-label="Link preview">
+                        <span className={styles.previewLabel}>Preview</span>
+                        <span className={styles.previewLink}>{previewLabel}</span>
                     </div>
                 )}
 
                 {/* ── Submission error ── */}
                 {error && (
-                    <p className="insert-link-dialog__error" role="alert">
+                    <p className={styles.error} role="alert">
                         {error}
                     </p>
                 )}
 
                 {/* ── Footer ── */}
-                <div className="insert-link-dialog__footer">
+                <div className={styles.footer}>
                     {canRemove ? (
                         <button
                             type="button"
-                            className="insert-link-dialog__remove"
+                            className={styles.remove}
                             onClick={onRemove}
                         >
                             <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -287,17 +290,16 @@ export function InsertLinkDialog({
                     ) : (
                         <span />
                     )}
-                    <div className="insert-link-dialog__footer-actions">
-                        <button type="button" className="ded-action-btn" onClick={onClose}>
+                    <div className={styles.footerActions}>
+                        <Button type="button" variant="ghost" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
-                            className="ded-share-btn"
                             disabled={!canSubmit}
                         >
                             {mode === 'edit' ? 'Apply changes' : 'Insert link'}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </form>
