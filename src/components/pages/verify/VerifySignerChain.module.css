@@ -1,0 +1,77 @@
+/* Immutable signer-chain presentation for public verification results. */
+
+.chain {
+    display: grid;
+    gap: 0.625rem;
+    margin-top: 1rem;
+}
+.heading {
+    margin: 0 0 0.25rem;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.summary {
+    margin: 0;
+    color: var(--color-success);
+    font-size: 0.8125rem;
+}
+.signer {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    border: 1px solid var(--color-success-border);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-success) 8%, transparent);
+}
+.signerHeader {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+.identity {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+.order {
+    display: inline-flex;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-success) 18%, transparent);
+    color: var(--color-success);
+    font-size: 0.8125rem;
+    font-weight: 800;
+}
+.name {
+    color: var(--color-success);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+.owner {
+    padding: 0.125rem 0.4375rem;
+    border-radius: 999px;
+    background: var(--color-primary-subtle);
+    color: var(--color-primary);
+    font-size: 0.8125rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.date {
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+}
+.email {
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    overflow-wrap: anywhere;
+}
