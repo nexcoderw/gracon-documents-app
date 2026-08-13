@@ -27,6 +27,8 @@ import {
 } from '@/lib/session';
 import { DOCS_NAV_ITEMS } from '@/constants';
 import { UserAvatar } from '@/components/shared/UserAvatar';
+import { Button, Input } from '@/components/ui';
+import styles from './DocsHeader.module.css';
 
 /** Debounce delay in ms before the search query is pushed to the URL. */
 const SEARCH_DEBOUNCE_MS = 350;
@@ -46,6 +48,8 @@ export function DocsHeader({ user }: { user: SessionUser }) {
 
     // Keep local query in sync when URL params change externally (e.g. nav away and back).
     useEffect(() => {
+        // This effect intentionally reconciles controlled input state with browser navigation.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setQuery(searchParams.get('search') ?? '');
     }, [searchParams]);
 
@@ -119,37 +123,30 @@ export function DocsHeader({ user }: { user: SessionUser }) {
     const settingsUrl = getMainAppSettingsUrl();
 
     return (
-        <header className="docs-header">
+        <header className={styles.header}>
             {/* ── Main bar ── */}
-            <div className="docs-header__bar">
+            <div className={styles.bar}>
                 {/* Logo */}
-                <Link href="/documents" className="docs-header__logo" aria-label="Gracon Docs home">
-                    <div className="docs-header__logo-mark">G</div>
-                    <div className="docs-header__logo-text">
-                        <span className="docs-header__logo-eyebrow">Gracon 360</span>
-                        <span className="docs-header__logo-name">Documents</span>
+                <Link href="/documents" className={styles.logo} aria-label="Gracon Docs home">
+                    <div className={styles.logoMark}>G</div>
+                    <div className={styles.logoText}>
+                        <span className={styles.logoEyebrow}>Gracon 360</span>
+                        <span className={styles.logoName}>Documents</span>
                     </div>
                 </Link>
 
                 {/* Search */}
                 <form
                     onSubmit={handleFormSubmit}
-                    className="docs-header__search"
+                    className={styles.search}
                     role="search"
                     aria-label="Search documents"
                 >
-                    <span className="docs-header__search-icon" aria-hidden="true">
-                        <HugeiconsIcon
-                            icon={Search01Icon}
-                            size={16}
-                            color="currentColor"
-                            className={searching ? 'docs-search-icon--searching' : ''}
-                        />
-                    </span>
-                    <input
+                    <Input
                         type="search"
                         placeholder="Search documents…"
-                        className="input-glass"
+                        className={styles.searchInput}
+                        leftIcon={<HugeiconsIcon icon={Search01Icon} size={16} className={searching ? styles.searching : ''} />}
                         value={query}
                         onChange={(e) => handleSearchChange(e.target.value)}
                         aria-label="Search documents"
@@ -159,7 +156,7 @@ export function DocsHeader({ user }: { user: SessionUser }) {
                         <button
                             type="button"
                             onClick={clearSearch}
-                            className="docs-header__search-clear"
+                            className={styles.searchClear}
                             aria-label="Clear search"
                         >
                             <HugeiconsIcon icon={Cancel01Icon} size={14} color="currentColor" />
@@ -168,20 +165,21 @@ export function DocsHeader({ user }: { user: SessionUser }) {
                 </form>
 
                 {/* Right-side actions */}
-                <div className="docs-header__actions">
+                <div className={styles.actions}>
                     {/* Mobile search toggle */}
-                    <button
-                        className="btn-icon docs-header__mobile-search-btn"
+                    <Button
+                        variant="ghost"
+                        iconOnly
+                        className={styles.mobileSearchButton}
                         onClick={() => setMobileSearchOpen((v) => !v)}
                         aria-label="Search"
                     >
                         <HugeiconsIcon icon={Search01Icon} size={17} color="currentColor" />
-                    </button>
+                    </Button>
 
                     <Link
                         href="/documents/new?type=RICH_TEXT"
-                        className="btn-primary"
-                        style={{ textDecoration: 'none', padding: '10px 20px', fontSize: 13 }}
+                        className={`${styles.actionLink} ${styles.newLink}`}
                     >
                         + New
                     </Link>
@@ -190,17 +188,16 @@ export function DocsHeader({ user }: { user: SessionUser }) {
                         href="/verify"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="btn-ghost docs-header__verify"
-                        style={{ textDecoration: 'none', padding: '9px 16px', fontSize: 13 }}
+                        className={`${styles.actionLink} ${styles.verifyLink}`}
                     >
                         Verify
                     </Link>
 
-                    <div ref={avatarMenuRef} className="docs-header__account">
+                    <div ref={avatarMenuRef} className={styles.account}>
                         <button
                             type="button"
                             onClick={() => setAvatarMenuOpen((open) => !open)}
-                            className="docs-header__avatar"
+                            className={styles.avatar}
                             title={fullName}
                             aria-label="Open account menu"
                             aria-expanded={avatarMenuOpen}
@@ -210,16 +207,16 @@ export function DocsHeader({ user }: { user: SessionUser }) {
                         </button>
 
                         {avatarMenuOpen && (
-                            <div className="docs-header__account-menu" role="menu">
-                                <div className="docs-header__account-profile">
+                            <div className={styles.accountMenu} role="menu">
+                                <div className={styles.accountProfile}>
                                     <UserAvatar user={user} size="sm" />
-                                    <div className="docs-header__account-copy">
-                                        <p className="docs-header__account-name">{fullName}</p>
-                                        <p className="docs-header__account-email">{user.email}</p>
+                                    <div className={styles.accountCopy}>
+                                        <p className={styles.accountName}>{fullName}</p>
+                                        <p className={styles.accountEmail}>{user.email}</p>
                                     </div>
                                 </div>
                                 <a
-                                    className="docs-header__account-item"
+                                    className={styles.accountItem}
                                     href={profileUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -230,7 +227,7 @@ export function DocsHeader({ user }: { user: SessionUser }) {
                                     <span>Profile</span>
                                 </a>
                                 <a
-                                    className="docs-header__account-item"
+                                    className={styles.accountItem}
                                     href={settingsUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -240,10 +237,10 @@ export function DocsHeader({ user }: { user: SessionUser }) {
                                     <HugeiconsIcon icon={Settings02Icon} size={15} />
                                     <span>Settings</span>
                                 </a>
-                                <div className="docs-header__account-divider" />
+                                <div className={styles.divider} />
                                 <button
                                     type="button"
-                                    className="docs-header__account-item docs-header__account-item--danger"
+                                    className={`${styles.accountItem} ${styles.danger}`}
                                     onClick={logout}
                                     role="menuitem"
                                 >
@@ -258,39 +255,36 @@ export function DocsHeader({ user }: { user: SessionUser }) {
 
             {/* ── Mobile search overlay ── */}
             {mobileSearchOpen && (
-                <div className="docs-header__mobile-search">
-                    <form onSubmit={handleFormSubmit} style={{ display: 'flex', gap: 8 }}>
-                        <div style={{ flex: 1, position: 'relative' }}>
-                            <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', color: 'var(--color-text-muted)', pointerEvents: 'none' }}>
-                                <HugeiconsIcon icon={Search01Icon} size={16} color="currentColor" />
-                            </span>
-                            <input
+                <div className={styles.mobileSearch}>
+                    <form onSubmit={handleFormSubmit} className={styles.mobileSearchForm}>
+                        <div className={styles.mobileSearchField}>
+                            <Input
                                 type="search"
                                 placeholder="Search documents…"
-                                className="input-glass"
+                                className={styles.searchInput}
+                                leftIcon={<HugeiconsIcon icon={Search01Icon} size={16} />}
                                 value={query}
                                 onChange={(e) => handleSearchChange(e.target.value)}
                                 autoFocus
                                 autoComplete="off"
-                                style={{ paddingLeft: 40, height: 44, borderRadius: 9999, fontSize: 14 }}
                             />
                         </div>
                         {query && (
-                            <button
+                            <Button
                                 type="button"
                                 onClick={() => { clearSearch(); setMobileSearchOpen(false); }}
-                                className="btn-ghost"
-                                style={{ padding: '9px 14px', fontSize: 12, flexShrink: 0 }}
+                                variant="ghost"
+                                size="sm"
                             >
                                 Clear
-                            </button>
+                            </Button>
                         )}
                     </form>
                 </div>
             )}
 
             {/* ── Nav strip ── */}
-            <nav className="docs-header__nav" aria-label="Document sections">
+            <nav className={styles.nav} aria-label="Document sections">
                 {DOCS_NAV_ITEMS.map((item) => {
                     const active = item.isActive(pathname, status);
                     return (
@@ -298,7 +292,7 @@ export function DocsHeader({ user }: { user: SessionUser }) {
                             key={item.href}
                             href={item.href}
                             title={item.description}
-                            className={`docs-header__nav-item${active ? ' docs-header__nav-item--active' : ''}`}
+                            className={`${styles.navItem} ${active ? styles.navItemActive : ''}`}
                         >
                             {item.label}
                         </Link>
