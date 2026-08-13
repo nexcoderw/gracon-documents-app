@@ -39,8 +39,7 @@ This application lets users create, organize, edit, share, sign, verify, and rev
 
 ## Techniques Used
 
-- Direct browser calls to `api/documents` for document operations
-- Next.js proxy routes for auth refresh/current user and signature operations
+- Explicit same-origin Next.js BFF routes for document, auth, signature, invitation, asset, and export operations
 - Server-side single-flight session refresh/upgrade helpers for auth and signature proxy routes
 - Cross-app auth is moving to the shared Gracon session-cookie contract owned by `app/app` and the auth service. `app/documents` should validate server-side cookies through local route handlers and must not depend on JavaScript-readable refresh tokens in production.
 - Profile avatars render through the same-origin `/api/profile-image` route with a reusable `UserAvatar` fallback. Do not place raw presigned S3 profile-image URLs directly in header or editor chrome DOM.
@@ -210,8 +209,9 @@ Key variables:
 ```env
 NEXT_PUBLIC_DOCS_URL=http://localhost:4002
 NEXT_PUBLIC_APP_URL=http://localhost:4000
-NEXT_PUBLIC_DOCUMENTS_API_URL=http://localhost:3005/api/v1
-NEXT_PUBLIC_SIGNATURE_API_URL=http://localhost:3002/api/v1
+AUTH_API_URL=http://localhost:3000/api/v1
+DOCUMENTS_API_URL=http://localhost:3005/api/v1
+SIGNATURE_API_URL=http://localhost:3002/api/v1
 AUTH_COOKIE_DOMAIN=
 AUTH_COOKIE_SECURE=false
 AUTH_COOKIE_SAME_SITE=lax
@@ -225,7 +225,9 @@ NEXT_PUBLIC_DOCUMENTS_USE_MAIN_APP_LOGIN=false
 NEXT_PUBLIC_ALLOW_DEV_READABLE_AUTH_COOKIES=true
 ```
 
-Editor image storage variables belong in `api/documents`, not this frontend app. Do not expose storage credentials with `NEXT_PUBLIC_`.
+The three backend origins are server-only. Browser requests remain on port
+`4002` under explicit `/api` and `/api/v1` route handlers. Editor image storage
+variables belong in `api/documents`, not this frontend app.
 For production, the auth cookie domain should be the parent domain, for example
 `.gracon360.com`, so `app.gracon360.com` login can be reused by
 `documents.gracon360.com`. Real session credentials should be `HttpOnly` and
@@ -236,8 +238,8 @@ cookies, and let the server route handlers own shared cookie validation.
 
 ## Integration Boundaries
 
-- Talks directly to `api/documents`
-- Uses local proxy routes for auth/session recovery and signature endpoints
+- Uses fixed local BFF routes for every browser-to-`api/documents` operation
+- Uses fixed local BFF routes for auth/session recovery and signature endpoints
 - Uses local proxy routes for auth-owned user preferences so the documents frontend does not call `api/auth` directly from browser code
 - Uses local `/api/session` to validate the shared Gracon session server-side before loading protected document routes. Missing production sessions should redirect to `app/app` login, while the local documents login remains available for development compatibility.
 - Uses local `/api/logout` to revoke the current refresh session when available and clear shared document-visible session cookies before returning to the documents login route.
