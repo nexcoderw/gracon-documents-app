@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import type { Editor } from '@tiptap/react';
-import { toast } from '@/components/ui';
+import { Button, Card, toast } from '@/components/ui';
 import { DocumentFinaliseDialog } from '@/components/editor/DocumentFinaliseDialog';
 import { DocumentLockConfirmDialog } from '@/components/editor/DocumentLockConfirmDialog';
 import { DocumentPageSetupDialog } from '@/components/editor/DocumentPageSetupDialog';
@@ -48,6 +48,7 @@ import {
 } from '@/lib/tiptap/tiptap-page-metrics';
 import { applyTiptapPageLayoutOffsets } from '@/lib/tiptap/tiptap-page-breaks';
 import { createTiptapLivePageGeometry } from '@/lib/tiptap/tiptap-page-geometry';
+import styles from './EditDocumentPage.module.css';
 import {
     hasDocumentPermission,
     isDocumentBaseReadOnly,
@@ -836,35 +837,35 @@ export default function EditDocumentPage() {
 
     if (!doc) {
         return (
-            <div className="glass" style={{ maxWidth: 720, margin: '60px auto 0', borderRadius: 'var(--radius-xl)', padding: '28px 24px', display: 'grid', gap: 14, textAlign: 'center' }}>
-                <p style={{ margin: '0 0 6px', fontSize: 19, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <Card className={styles.recovery}>
+                <p className={styles.title}>
                     Unable to open this document
                 </p>
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                <p className={styles.copy}>
                     {loadError ?? 'The editor could not load the requested document.'}
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <button onClick={() => setRetryKey(v => v + 1)} className="btn-primary" style={{ fontSize: 12 }}>Retry</button>
-                    <button onClick={() => router.push('/documents')} className="btn-ghost" style={{ fontSize: 12 }}>Back to documents</button>
+                <div className={styles.actions}>
+                    <Button onClick={() => setRetryKey((value) => value + 1)}>Retry</Button>
+                    <Button variant="ghost" onClick={() => router.push('/documents')}>Back to documents</Button>
                 </div>
-            </div>
+            </Card>
         );
     }
 
     if (doc.type !== 'RICH_TEXT') {
         return (
-            <div className="glass" style={{ maxWidth: 760, margin: '60px auto 0', borderRadius: 'var(--radius-xl)', padding: '30px 26px', display: 'grid', gap: 16, textAlign: 'center' }}>
-                <p style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            <Card className={`${styles.recovery} ${styles.wide}`}>
+                <p className={styles.title}>
                     Spreadsheet documents are no longer supported here
                 </p>
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                <p className={styles.copy}>
                     The documents workspace is now dedicated to rich text documents only.
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <button onClick={() => router.push('/documents')} className="btn-primary" style={{ fontSize: 12 }}>Back to documents</button>
-                    <button onClick={() => router.push('/documents/new')} className="btn-ghost" style={{ fontSize: 12 }}>Create rich text document</button>
+                <div className={styles.actions}>
+                    <Button onClick={() => router.push('/documents')}>Back to documents</Button>
+                    <Button variant="ghost" onClick={() => router.push('/documents/new')}>Create rich text document</Button>
                 </div>
-            </div>
+            </Card>
         );
     }
 
