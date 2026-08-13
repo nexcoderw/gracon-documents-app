@@ -1,0 +1,29 @@
+/* Shared non-printable application surface presentation. */
+
+.card {
+    border-radius: var(--radius-lg);
+    backdrop-filter: var(--glass-blur);
+}
+.default {
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    box-shadow: var(--glass-shadow);
+}
+.strong {
+    border: 1px solid var(--glass-border);
+    background: var(--color-bg-elevated-hover);
+    box-shadow: 0 0.5rem 2.5rem var(--color-primary-subtle);
+    backdrop-filter: blur(32px);
+}
+.none {
+    padding: 0;
+}
+.sm {
+    padding: 1rem;
+}
+.md {
+    padding: clamp(1.25rem, 3vw, 1.75rem);
+}
+.lg {
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+}
