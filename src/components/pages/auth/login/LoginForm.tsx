@@ -12,6 +12,7 @@ import { useSearchParams } from 'next/navigation';
 import { Button, Input, Card } from '@/components/ui';
 import { loginApi } from '@/api/auth/login.api';
 import { APP_URL, DOCS_URL, normalizeDocsPath } from '@/lib/session';
+import styles from './LoginForm.module.css';
 
 interface LoginErrors {
     email?: string;
@@ -84,53 +85,20 @@ export function LoginForm() {
     }
 
     return (
-        <Card strength="strong" style={{ width: '100%', maxWidth: 400 }}>
-            <div className="animate-fade-up" style={{ padding: '4px 0' }}>
-                <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                    <div
-                        style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 12,
-                            background: 'var(--color-primary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 16,
-                            fontWeight: 700,
-                            color: '#fff',
-                            margin: '0 auto 18px',
-                            boxShadow: '0 4px 16px var(--color-primary-glow)',
-                        }}
-                    >
-                        ID
-                    </div>
+        <Card strength="strong" className={styles.card}>
+            <div className={styles.content}>
+                <div className={styles.header}>
+                    <div className={styles.identityMark}>ID</div>
 
-                    <h1
-                        style={{
-                            fontSize: 18,
-                            fontWeight: 700,
-                            color: 'var(--color-text-primary)',
-                            marginBottom: 6,
-                            letterSpacing: '-0.02em',
-                        }}
-                    >
-                        Welcome back
-                    </h1>
-                    <p
-                        style={{
-                            fontSize: 14,
-                            color: 'var(--color-text-secondary)',
-                            margin: 0,
-                        }}
-                    >
+                    <h1 className={styles.title}>Welcome back</h1>
+                    <p className={styles.subtitle}>
                         Sign in to your verified account
                     </p>
                 </div>
 
                 <form
                     onSubmit={handleSubmit}
-                    style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+                    className={styles.form}
                     noValidate
                 >
                     <Input
@@ -172,31 +140,15 @@ export function LoginForm() {
                     />
 
                     {apiError && (
-                        <div
-                            role="alert"
-                            className="animate-scale-in"
-                            style={{
-                                background: 'var(--color-error-subtle)',
-                                border: '1px solid var(--color-error-border)',
-                                borderRadius: 'var(--radius-md)',
-                                padding: '10px 14px',
-                                fontSize: 13,
-                                color: 'var(--color-error)',
-                            }}
-                        >
+                        <div role="alert" className={styles.error}>
                             {apiError}
                         </div>
                     )}
 
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <div className={styles.forgotRow}>
                         <a
                             href={`${APP_URL}/forgot-password`}
-                            style={{
-                                fontSize: 12,
-                                color: 'var(--color-text-muted)',
-                                textDecoration: 'none',
-                                fontWeight: 500,
-                            }}
+                            className={`${styles.link} ${styles.mutedLink}`}
                         >
                             Forgot password?
                         </a>
@@ -207,30 +159,15 @@ export function LoginForm() {
                         fullWidth
                         loading={loading}
                         loadingText="Signing in..."
-                        style={{ marginTop: 4 }}
+                        className={styles.submit}
                     >
                         Sign in
                     </Button>
                 </form>
 
-                <p
-                    style={{
-                        textAlign: 'center',
-                        fontSize: 13,
-                        color: 'var(--color-text-muted)',
-                        marginTop: 24,
-                        marginBottom: 0,
-                    }}
-                >
+                <p className={styles.registration}>
                     Don&apos;t have an account?{' '}
-                    <a
-                        href={`${APP_URL}/register`}
-                        style={{
-                            color: 'var(--color-primary)',
-                            fontWeight: 500,
-                            textDecoration: 'none',
-                        }}
-                    >
+                    <a href={`${APP_URL}/register`} className={styles.link}>
                         Create one
                     </a>
                 </p>
