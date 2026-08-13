@@ -1,4 +1,4 @@
-# App Documents
+# Gracon Documents App
 
 Rich-text document workspace for the Gracon platform.
 
@@ -6,7 +6,7 @@ This application lets users create, organize, edit, share, sign, verify, and rev
 
 ## Overview
 
-- Runtime: Next.js 15 + React + TypeScript
+- Runtime: Next.js 16 + React 19 + TypeScript
 - Default port: `4002`
 - Styling: Tailwind CSS
 - State: Zustand + sessionStorage
@@ -149,7 +149,7 @@ test/
 
 ```text
 app/documents/
-  agents/        project-local AI agent rules
+  docs/          project architecture and execution rules
   src/
     app/
     api/
@@ -165,9 +165,9 @@ app/documents/
 
 ## AI Agent Rules
 
-Project-local AI guidance lives in `agents/README.md`.
+Project-local engineering guidance lives in [`docs/README.md`](./docs/README.md).
 
-Read that guide before changing the editor, document canvas, page setup, rulers, print preview, export, import, invitations, signing, locking, session handoff, or public verification surfaces. The guide is intentionally specific to this frontend so contributors preserve document geometry, signed-document immutability, Gracon-owned pagination/export work, and the identity handoff boundary with `app/app`.
+Read that guide before changing the editor, document canvas, page setup, rulers, print preview, export, import, invitations, signing, locking, session handoff, or public verification surfaces. It defines the required reading order, ownership boundaries, parity requirements, verification gates, and Git handoff rules for this frontend.
 
 ## Security Hardening
 
@@ -260,7 +260,10 @@ cookies, and let the server route handlers own shared cookie validation.
 
 - Verify permission behavior before changing document actions
 - Keep editor changes isolated from auth behavior unless the flow truly crosses apps
+- Keep persisted editor schema data separate from render-only pagination measurements and DOM offsets
+- Make autosave and cross-tab updates safe against stale responses, out-of-order completion, and signed/read-only transitions
 - Keep `components/editor` and `components/documents` for `.tsx` UI components; put editor/document `.ts` hooks, extensions, sync helpers, and pure state helpers under `src/store/editor` or `src/store/documents`
 - Test invitation, share, signing, and public verify flows after document-domain changes
 - Keep signed/locked read-only tests current whenever document statuses, permissions, or editor view modes change
 - Keep the comments drawer cursor-paginated. Do not reintroduce a full unbounded comment-history fetch in the editor.
+- Run `npm run check:security`, `npm run lint`, `npm run test`, and `npm run build` before handoff
