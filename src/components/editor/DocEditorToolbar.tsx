@@ -552,6 +552,8 @@ function LineHeightPicker({ editor }: { editor: Editor }) {
 
     useEffect(() => {
         if (!open) {
+            // Closing the picker deliberately resets its draft from editor state.
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setCustomValue(formatLineHeight(currentValue));
         }
     }, [currentValue, open]);
