@@ -18,7 +18,7 @@ Purpose: keep session boundaries, editor schema, document geometry, workflow sta
 Update documentation in the same change when modifying:
 
 - shared-session cookies, development compatibility, refresh, logout, or cross-app redirects;
-- protected routes, same-origin auth/profile/signature proxies, or fixed service origins;
+- protected routes, same-origin document/auth/profile/signature proxies, or fixed server-only service origins;
 - document permissions, sharing, invitation defaults, OTP, identity handoff, or acceptance;
 - document status, finalisation, signing readiness, signing orchestration, evidence, or owner lock;
 - TipTap schema, extensions, commands, stored JSON, migrations, or readonly policy;
@@ -73,7 +73,7 @@ For each new or changed variable:
 - Update the pagination architecture note when milestones, page measurement, break semantics, page chrome, outline, footnotes, table of contents, or export capture architecture changes.
 - Update root `AGENTS.md` when ownership or cross-project communication changes.
 - Update backend docs when the frontend requires a new authorization, readiness, invitation, image, signature, or audit contract.
-- Do not document direct browser calls as acceptable when the architecture requires a same-origin server proxy.
+- Do not document direct browser calls as acceptable; browser backend traffic belongs behind explicit same-origin route handlers.
 
 ## Documentation Checklist
 
