@@ -1,0 +1,305 @@
+/* Responsive secure image insertion dialog outside document geometry. */
+
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 140;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: var(--color-backdrop);
+    backdrop-filter: blur(10px);
+}
+
+.dialog {
+    display: grid;
+    width: min(100%, 40rem);
+    max-height: calc(100dvh - 2rem);
+    gap: 1rem;
+    overflow-y: auto;
+    padding: clamp(1rem, 4vw, 1.375rem);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    background: var(--color-bg-solid);
+    box-shadow: var(--glass-shadow);
+}
+
+.header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.headerIcon,
+.dropzoneIcon {
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--color-border-primary);
+    background: var(--color-primary-subtle);
+    color: var(--color-primary);
+}
+
+.headerIcon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: var(--radius-md);
+}
+
+.headerCopy {
+    min-width: 0;
+}
+
+.eyebrow {
+    margin: 0 0 0.125rem;
+    color: var(--color-primary);
+    font-size: 0.8125rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.title {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: 1.25rem;
+}
+
+.close {
+    display: grid;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+}
+
+.close:hover:not(:disabled) {
+    border-color: var(--color-border);
+    background: var(--color-primary-subtle);
+    color: var(--color-text-primary);
+}
+
+.copy,
+.footer p {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+}
+
+.tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.375rem;
+    padding: 0.25rem;
+    border-radius: var(--radius-md);
+    background: var(--color-primary-subtle);
+}
+
+.tab {
+    min-height: 2.75rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.activeTab {
+    border-color: var(--color-border-primary);
+    background: var(--color-bg-solid);
+    color: var(--color-primary);
+}
+
+.field,
+.uploadPanel {
+    display: grid;
+    gap: 0.375rem;
+}
+
+.field > span {
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.field input {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-input);
+    color: var(--color-text-primary);
+    font: inherit;
+    font-size: 0.875rem;
+    outline: none;
+}
+
+.field input:focus {
+    border-color: var(--color-border-focus);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+}
+
+.field small {
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.fieldError input {
+    border-color: var(--color-error-border);
+}
+
+.errorHint {
+    color: var(--color-error) !important;
+}
+
+.fileInput {
+    display: none;
+}
+
+.dropzone {
+    display: grid;
+    min-height: 9rem;
+    place-items: center;
+    align-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 1px dashed var(--color-border-primary);
+    border-radius: var(--radius-lg);
+    background: var(--color-primary-subtle);
+    color: var(--color-text-secondary);
+    font: inherit;
+    text-align: center;
+    cursor: pointer;
+}
+
+.dropzone:hover {
+    border-color: var(--color-primary);
+    background: var(--color-bg-elevated);
+}
+
+.dropzoneIcon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+}
+
+.dropzone strong {
+    max-width: 100%;
+    overflow: hidden;
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dropzone small {
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+}
+
+.preview {
+    position: relative;
+    display: grid;
+    min-height: 12rem;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-elevated);
+}
+
+.preview img {
+    display: block;
+    max-width: 100%;
+    max-height: 18rem;
+    object-fit: contain;
+}
+
+.previewEmpty {
+    display: grid;
+    place-items: center;
+    gap: 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+}
+
+.previewStatus {
+    position: absolute;
+    inset: auto 0.75rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-solid);
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    text-align: center;
+}
+
+.previewError {
+    color: var(--color-error);
+}
+
+.metaGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.error {
+    margin: 0;
+    padding: 0.75rem;
+    border: 1px solid var(--color-error-border);
+    border-radius: var(--radius-md);
+    background: var(--color-error-subtle);
+    color: var(--color-error);
+    font-size: 0.8125rem;
+}
+
+.footer,
+.footerActions {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.footer {
+    justify-content: space-between;
+}
+
+.footer p {
+    max-width: 24rem;
+}
+
+@media (max-width: 35.999rem) {
+    .backdrop {
+        align-items: end;
+        padding: 0.75rem;
+    }
+
+    .metaGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .footer {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .footerActions,
+    .footerActions > button {
+        width: 100%;
+    }
+
+    .footerActions {
+        flex-direction: column-reverse;
+    }
+}
