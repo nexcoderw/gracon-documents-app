@@ -10,6 +10,7 @@
  */
 import type { PointerEventHandler } from 'react';
 import type { DocumentCompletedSignature } from '@/api/documents.api';
+import { Button } from '@/components/ui';
 
 interface SignatureStripCardProps {
     documentTitle: string;
@@ -364,26 +365,25 @@ export function SignatureStripCard({
                             Position it precisely, then save.
                         </span>
                         <div data-signature-action="true" style={{ display: 'flex', gap: 6 }}>
-                            <button
+                            <Button
                                 type="button"
                                 data-signature-action="true"
                                 onClick={onReset}
                                 disabled={persisting || !dirty}
-                                className="btn-ghost"
-                                style={{ fontSize: 10, padding: '5px 11px' }}
+                                variant="ghost"
+                                size="sm"
                             >
                                 Reset
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 type="button"
                                 data-signature-action="true"
                                 onClick={onSave}
                                 disabled={persisting || !dirty}
-                                className="btn-primary"
-                                style={{ fontSize: 10, padding: '5px 11px' }}
+                                size="sm"
                             >
                                 {persisting ? 'Saving…' : 'Save Position'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 )}
