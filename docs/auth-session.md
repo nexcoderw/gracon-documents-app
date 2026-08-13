@@ -32,6 +32,8 @@ Environment flags are configuration, not authorization. Server code must fail cl
 ## Session Validation
 
 - `/api/session` is the browser-facing validation boundary for protected route hydration.
+- `/api/v1/**` is the browser-facing boundary for document, invitation, folder,
+  template, editor-image, preference, and signature operations.
 - `/api/me` returns only the user fields required by the documents UI.
 - The `session_active` cookie is a routing/presence hint only.
 - Do not render private document content until session recovery and document authorization complete.
@@ -98,7 +100,8 @@ Environment flags are configuration, not authorization. Server code must fail cl
 
 - Development and production modes remain explicitly separated.
 - Browser code never reads a production refresh token.
-- Same-origin handlers validate fixed upstreams and safe redirects.
+- Same-origin handlers validate fixed server-only upstreams, methods, paths,
+  query keys, sizes, timeouts, origins, and safe redirects.
 - Concurrent refresh settles all callers.
 - Logout clears credentials, caches, editors, and sensitive state.
 - Cross-app return is safe and cannot loop through login/logout.
