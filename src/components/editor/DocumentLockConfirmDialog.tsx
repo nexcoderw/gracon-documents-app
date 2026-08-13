@@ -3,6 +3,9 @@
  */
 'use client';
 
+import { Button } from '@/components/ui';
+import styles from './DocumentLockConfirmDialog.module.css';
+
 interface DocumentLockConfirmDialogProps {
     open: boolean;
     submitting: boolean;
@@ -21,43 +24,40 @@ export function DocumentLockConfirmDialog({
 
     return (
         <div
-            className="docs-finalise-dialog__backdrop"
+            className={styles.backdrop}
             role="dialog"
             aria-modal="true"
             aria-labelledby="docs-lock-dialog-title"
         >
-            <div className="docs-finalise-dialog">
-                <div className="docs-finalise-dialog__header">
-                    <p className="docs-finalise-dialog__eyebrow">Lock document</p>
-                    <h2 id="docs-lock-dialog-title" className="docs-finalise-dialog__title">
+            <div className={styles.dialog}>
+                <div>
+                    <p className={styles.eyebrow}>Lock document</p>
+                    <h2 id="docs-lock-dialog-title" className={styles.title}>
                         Permanently lock this signed document?
                     </h2>
-                    <p className="docs-finalise-dialog__copy">
+                    <p className={styles.copy}>
                         After locking, the document becomes immutable. The verification QR code will be attached for authenticity checks.
                     </p>
                 </div>
 
-                <p className="docs-finalise-dialog__warning">
+                <p className={styles.warning}>
                     This action should only be done after you have reviewed the signed content and confirmed all required signatures are complete.
                 </p>
 
-                <div className="docs-finalise-dialog__actions">
-                    <button
-                        type="button"
-                        className="ded-action-btn"
+                <div className={styles.actions}>
+                    <Button
+                        variant="ghost"
                         onClick={onCancel}
                         disabled={submitting}
                     >
                         Cancel
-                    </button>
-                    <button
-                        type="button"
-                        className="ded-action-btn ded-action-btn--primary"
+                    </Button>
+                    <Button
                         onClick={onConfirm}
                         disabled={submitting}
                     >
                         {submitting ? 'Locking…' : 'Yes, lock document'}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>
