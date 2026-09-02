@@ -58,8 +58,35 @@ export interface TiptapPageBlockLayoutPlan {
     mode: TiptapPageBlockLayoutMode;
 }
 
+/** Distance at which a block already counts as starting a page. */
+const PAGE_START_TOLERANCE_PX = 1;
+
 function toPositiveHeight(value: number) {
     return Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
+/**
+ * Calculates the push a forced break needs, if it needs one at all.
+ *
+ * A block that already opens a printable region must stay where it is: pushing
+ * it again would leave a page-sized hole above content that was already correct.
+ *
+ * @param geometry - Normalized page geometry.
+ * @param top - Block top after every offset applied so far.
+ * @returns Pixels to push, or zero when the block already starts a page.
+ */
+function calculateForcedBreakPush(geometry: TiptapPageGeometry, top: number) {
+    const region = getTiptapPageRegionAt(geometry, top);
+
+    if (Math.abs(top - region.printableTop) <= PAGE_START_TOLERANCE_PX) {
+        return 0;
+    }
+
+    if (top < region.printableTop) {
+        return Math.max(0, Math.ceil(region.printableTop - top));
+    }
+
+    return Math.max(0, Math.ceil(getNextPrintableTop(geometry, top) - top));
 }
 
 function getNextPrintableTop(geometry: TiptapPageGeometry, top: number) {
@@ -121,7 +148,7 @@ function planWholeBlock(
     let offset = 0;
 
     if (forceNextPage) {
-        offset = Math.max(0, Math.ceil(getNextPrintableTop(geometry, effectiveTop) - effectiveTop));
+        offset = calculateForcedBreakPush(geometry, effectiveTop);
     } else if (startsInHeader) {
         offset = Math.max(0, Math.ceil(region.printableTop - effectiveTop));
     } else if (crossesFooter && !oversized) {
@@ -163,9 +190,7 @@ function planSplittableBlock(
     const forceNextPage = block.forceNextPage === true;
     const spacers: TiptapPageLineSpacer[] = [];
     let offset = forceNextPage
-        ? Math.max(0, Math.ceil(
-            getNextPrintableTop(geometry, block.top + carry) - (block.top + carry),
-        ))
+        ? calculateForcedBreakPush(geometry, block.top + carry)
         : 0;
     let lineCarry = 0;
     let overflow = false;
