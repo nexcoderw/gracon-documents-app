@@ -133,10 +133,21 @@ function ensurePageSurfaces(frameEl: HTMLElement, pageCount: number) {
     frameEl.prepend(surfacesEl);
 }
 
+/**
+ * Normalizes a cloned frame for export capture.
+ *
+ * @param frameEl - Cloned document frame.
+ * @param pageCount - Number of A4 pages the frame must cover.
+ * @param margins - Page margins from the source document layout.
+ * @param paginate - Whether to recompute page layout on this frame. The
+ *   html2canvas clone already carries the spacers computed here, so it keeps
+ *   them instead of measuring again inside the capture iframe.
+ */
 function prepareExportFrame(
     frameEl: HTMLElement,
     pageCount: number,
     margins: DocumentLayoutMargins = DEFAULT_DOCUMENT_LAYOUT.margins,
+    paginate = true,
 ) {
     frameEl.classList.remove('document-layout-frame--web-layout', 'document-layout-frame--show-marks');
     frameEl.classList.add('document-layout-frame--paged');
@@ -151,7 +162,7 @@ function prepareExportFrame(
         pageEl.style.height = `${A4_PAPER_HEIGHT_PX}px`;
     });
     const editorEl = frameEl.querySelector('.ProseMirror');
-    if (editorEl instanceof HTMLElement) {
+    if (paginate && editorEl instanceof HTMLElement) {
         applyTiptapPageLayoutOffsets(editorEl, createTiptapExportPageGeometry({
             pageHeight: A4_PAPER_HEIGHT_PX,
             margins,
@@ -223,7 +234,7 @@ async function renderExportSheet(
             if (!clonedFrame) return;
 
             applyExportPaperGeometry(clonedFrame, margins);
-            prepareExportFrame(clonedFrame, pageCount, margins);
+            prepareExportFrame(clonedFrame, pageCount, margins, false);
         },
     });
 }
