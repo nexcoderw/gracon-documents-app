@@ -7,7 +7,6 @@ import type { CommentAnchorInput } from '@/store/editor/comment-anchor-extension
 import { RichTextEditor } from './RichTextEditor';
 import { A4_PAPER_WIDTH_PX } from '@/constants/document-paper';
 import type { DocumentHeaderFooter } from '@/lib/document-layout';
-import type { TiptapPageGeometryInput } from '@/lib/tiptap/tiptap-page-geometry';
 
 interface PagedDocumentCanvasProps {
     canvasRef: RefObject<HTMLDivElement | null>;
@@ -21,11 +20,15 @@ interface PagedDocumentCanvasProps {
     pageHeight: number;
     contentHeight: number;
     printLayout: boolean;
+    /**
+     * Renders one continuous sheet instead of stacked pages. The editor uses it
+     * so writing is never interrupted by a seam; pagination is resolved in the
+     * download preview, where page surgery is safe.
+     */
+    continuous?: boolean;
     showFormattingMarks: boolean;
     paperStyle: CSSProperties;
     headerFooter: DocumentHeaderFooter;
-    /** Page geometry used to paginate the editable surface. */
-    pageGeometry?: TiptapPageGeometryInput;
     showRepeatedPageChrome?: boolean;
     pageGap?: number;
     overlayContent?: ReactNode;
@@ -40,6 +43,22 @@ function getFrameClassName(showFormattingMarks: boolean) {
         'document-layout-frame--paged',
         showFormattingMarks ? 'document-layout-frame--show-marks' : '',
     ].filter(Boolean).join(' ');
+}
+
+/**
+ * Renders one uninterrupted sheet behind the editable surface.
+ *
+ * @param height Sheet height in CSS pixels.
+ * @returns A single page surface covering the whole document.
+ */
+function createContinuousSurface(height: number) {
+    return (
+        <section
+            className="document-page-surface document-page-surface--continuous"
+            style={{ top: 0, height }}
+            aria-hidden="true"
+        />
+    );
 }
 
 function createPageSurfaces(
@@ -101,10 +120,10 @@ export function PagedDocumentCanvas({
     pageHeight,
     pageGap = 0,
     contentHeight,
+    continuous = false,
     showFormattingMarks,
     paperStyle,
     headerFooter,
-    pageGeometry,
     overlayContent,
     commentAnchors,
     onContentChange,
@@ -147,7 +166,9 @@ export function PagedDocumentCanvas({
                         }}
                     >
                         <div className="document-page-surfaces">
-                            {createPageSurfaces(pageCount, pageHeight, safePageGap, title, status, headerFooter)}
+                            {continuous
+                                ? createContinuousSurface(continuousMinHeight)
+                                : createPageSurfaces(pageCount, pageHeight, safePageGap, title, status, headerFooter)}
                         </div>
                         <RichTextEditor
                             key={documentId}
@@ -162,7 +183,6 @@ export function PagedDocumentCanvas({
                             pageNumber={1}
                             pageCount={pageCount}
                             paperStyle={paperStyle}
-                            pageGeometry={pageGeometry}
                             overlayContent={overlayContent}
                             commentAnchors={commentAnchors}
                         />
