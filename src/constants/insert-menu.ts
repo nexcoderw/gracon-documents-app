@@ -30,6 +30,7 @@ export const INSERT_ACTION_IDS = {
     footnote: 'insert:footnote',
     headerFooter: 'insert:header-footer',
     pageBreakBefore: 'insert:page-break-before',
+    pageBreakAtCursor: 'insert:page-break-at-cursor',
 } as const;
 
 export type InsertActionId = typeof INSERT_ACTION_IDS[keyof typeof INSERT_ACTION_IDS];
@@ -159,6 +160,12 @@ export const INSERT_ACTIONS = {
         label: 'Page break before paragraph',
         status: 'ready',
     },
+    pageBreakAtCursor: {
+        actionId: INSERT_ACTION_IDS.pageBreakAtCursor,
+        label: 'Page break',
+        shortcut: 'Ctrl+Enter',
+        status: 'ready',
+    },
 } satisfies Record<string, InsertActionDefinition>;
 
 function createInsertAction(action: InsertActionDefinition): MenuItemAction {
@@ -206,6 +213,7 @@ export const INSERT_MENU_ITEMS: MenuItem[] = [
     },
     { type: 'divider' },
     createInsertAction(INSERT_ACTIONS.footnote),
+    createInsertAction(INSERT_ACTIONS.pageBreakAtCursor),
     createInsertAction(INSERT_ACTIONS.pageBreakBefore),
     createInsertAction(INSERT_ACTIONS.headerFooter),
 ];
