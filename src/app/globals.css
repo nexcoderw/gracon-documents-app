@@ -174,6 +174,10 @@ body {
     z-index: 0;
     pointer-events: none;
 }
+/* The editable surface uses one uninterrupted sheet instead of stacked pages. */
+.document-page-surface--continuous {
+    border-radius: 2px;
+}
 .document-page-surface {
     position: absolute;
     left: 0;
@@ -1046,9 +1050,7 @@ body {
     user-select: none;
     -webkit-user-select: none;
 }
-.document-pagination-measuring .document-page-spacer {
-    display: none;
-}
+
 .document-layout-frame--show-marks
     .tiptap-editor
     .ProseMirror
@@ -1391,20 +1393,11 @@ body {
     page-break-inside: avoid;
 }
 /*
- * A table row cannot host a spacer element — the HTML parser pulls stray nodes
- * out of a table — so a row that starts a new page is pushed by padding its
- * cells instead. The pushed area keeps no top border so the seam stays clean.
+ * A long table continues on the next page as a real continuation table with its
+ * header row repeated, so the continuation starts flush at the top of its page.
  */
-.tiptap-editor .ProseMirror tr.document-page-row-offset > td,
-.tiptap-editor .ProseMirror tr.document-page-row-offset > th {
-    padding-top: calc(8px + var(--document-page-row-offset, 0px));
-    border-top-color: transparent;
-    background-clip: padding-box;
-}
-.document-pagination-measuring tr.document-page-row-offset > td,
-.document-pagination-measuring tr.document-page-row-offset > th {
-    padding-top: 8px;
-    border-top-color: inherit;
+.tiptap-editor .ProseMirror table[data-document-table-continuation='true'] {
+    margin-top: 0;
 }
 .tiptap-editor .ProseMirror td,
 .tiptap-editor .ProseMirror th {
