@@ -9,6 +9,7 @@ import {
     PAPER_CONTENT_PADDING_TOP_PX,
     PAPER_FOOTER_HEIGHT_PX,
     PAPER_HEADER_HEIGHT_PX,
+    PAPER_CONTENT_SAFETY_PX,
     PAPER_PAGE_GAP_PX,
 } from '../../constants/document-paper.ts';
 
@@ -25,6 +26,11 @@ export interface TiptapPageGeometryInput {
     headerHeight?: number;
     footerHeight?: number;
     margins?: Partial<TiptapPageMargins>;
+    /**
+     * Breathing room kept between content and page chrome, top and bottom.
+     * Without it a line can sit flush against the header rule or footer rule.
+     */
+    contentSafetyPadding?: number;
 }
 
 export interface TiptapPageGeometry {
@@ -34,6 +40,7 @@ export interface TiptapPageGeometry {
     headerHeight: number;
     footerHeight: number;
     margins: TiptapPageMargins;
+    contentSafetyPadding: number;
     printableTop: number;
     printableBottom: number;
     printableHeight: number;
@@ -80,8 +87,15 @@ export function createTiptapPageGeometry(input: TiptapPageGeometryInput = {}): T
     const headerHeight = normalizePositiveNumber(input.headerHeight, PAPER_HEADER_HEIGHT_PX);
     const footerHeight = normalizePositiveNumber(input.footerHeight, PAPER_FOOTER_HEIGHT_PX);
     const margins = normalizeMargins(input.margins);
-    const printableTop = Math.min(pageHeight, headerHeight + margins.top);
-    const printableBottom = Math.max(printableTop, pageHeight - footerHeight - margins.bottom);
+    const contentSafetyPadding = normalizePositiveNumber(input.contentSafetyPadding, 0);
+    const printableTop = Math.min(
+        pageHeight,
+        headerHeight + margins.top + contentSafetyPadding,
+    );
+    const printableBottom = Math.max(
+        printableTop,
+        pageHeight - footerHeight - margins.bottom - contentSafetyPadding,
+    );
 
     return {
         pageHeight,
@@ -90,6 +104,7 @@ export function createTiptapPageGeometry(input: TiptapPageGeometryInput = {}): T
         headerHeight,
         footerHeight,
         margins,
+        contentSafetyPadding,
         printableTop,
         printableBottom,
         printableHeight: Math.max(0, printableBottom - printableTop),
@@ -106,6 +121,7 @@ export function createTiptapLivePageGeometry(input: TiptapPageGeometryInput = {}
     return createTiptapPageGeometry({
         ...input,
         pageGap: input.pageGap ?? PAPER_PAGE_GAP_PX,
+        contentSafetyPadding: input.contentSafetyPadding ?? PAPER_CONTENT_SAFETY_PX,
     });
 }
 
@@ -119,6 +135,7 @@ export function createTiptapExportPageGeometry(input: TiptapPageGeometryInput = 
     return createTiptapPageGeometry({
         ...input,
         pageGap: 0,
+        contentSafetyPadding: input.contentSafetyPadding ?? PAPER_CONTENT_SAFETY_PX,
     });
 }
 
