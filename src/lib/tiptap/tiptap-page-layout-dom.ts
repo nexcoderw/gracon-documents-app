@@ -5,6 +5,7 @@
  * both surfaces paginate from the same numbers. Nothing here mutates TipTap
  * JSON: it only reads DOM rectangles and reports where pages must break.
  */
+import { getTiptapPageRegionAt, type TiptapPageGeometry } from './tiptap-page-geometry';
 import type {
     TiptapPageBlockLayoutInput,
     TiptapPageLineMeasurement,
@@ -16,11 +17,20 @@ const SPLITTABLE_BLOCK_SELECTOR = 'p, h1, h2, h3, h4, h5, h6, blockquote';
 /** Top-level blocks that are expanded into their list items. */
 const LIST_BLOCK_SELECTOR = 'ul, ol';
 
+/** The frame the stacked page surfaces are positioned inside. */
+const PAGE_FRAME_SELECTOR = '[data-document-export-root="true"]';
+
 /** Marks a rendered node as a pagination spacer rather than document content. */
 export const PAGE_SPACER_ATTRIBUTE = 'data-document-page-spacer';
 
 /** Class applied to every rendered pagination spacer. */
 export const PAGE_SPACER_CLASS = 'document-page-spacer';
+
+/** Identifies which planned spacer a rendered element came from. */
+export const PAGE_SPACER_KEY_ATTRIBUTE = 'data-document-page-spacer-key';
+
+/** Pixel difference below which a rendered spacer counts as correct. */
+const SPACER_CORRECTION_TOLERANCE_PX = 1;
 
 /** Class that hides spacers while a measurement pass runs. */
 export const PAGE_MEASURING_CLASS = 'document-pagination-measuring';
@@ -53,9 +63,24 @@ interface RootMeasureContext {
     scrollTop: number;
 }
 
+/**
+ * Finds the element the stacked page surfaces are positioned against.
+ *
+ * Page tops are absolute positions inside the document frame, so measuring from
+ * the editor root instead would shift every seam by the chrome between them.
+ *
+ * @param root - Rendered `.ProseMirror` element or export clone.
+ * @returns The page frame, or the root when no frame is present.
+ */
+function getPageOriginElement(root: HTMLElement): HTMLElement {
+    const frame = root.closest<HTMLElement>(PAGE_FRAME_SELECTOR);
+    return frame ?? root;
+}
+
 function createRootMeasureContext(root: HTMLElement): RootMeasureContext {
-    const rect = root.getBoundingClientRect();
-    const measuredScale = root.offsetWidth > 0 ? rect.width / root.offsetWidth : 1;
+    const origin = getPageOriginElement(root);
+    const rect = origin.getBoundingClientRect();
+    const measuredScale = origin.offsetWidth > 0 ? rect.width / origin.offsetWidth : 1;
     const scale = Number.isFinite(measuredScale) && measuredScale > 0.01 ? measuredScale : 1;
 
     return { originTop: rect.top, scale, scrollTop: root.scrollTop };
@@ -263,7 +288,11 @@ export function findTiptapLineStartPoint(
  * @param height - Spacer height in CSS pixels.
  * @returns A non-editable block-level spacer element.
  */
-export function createTiptapPageSpacerElement(ownerDocument: Document, height: number) {
+export function createTiptapPageSpacerElement(
+    ownerDocument: Document,
+    height: number,
+    key?: string,
+) {
     const spacer = ownerDocument.createElement('span');
 
     spacer.className = PAGE_SPACER_CLASS;
@@ -272,5 +301,77 @@ export function createTiptapPageSpacerElement(ownerDocument: Document, height: n
     spacer.setAttribute('aria-hidden', 'true');
     spacer.style.height = `${Math.max(0, Math.round(height))}px`;
 
+    if (key) {
+        spacer.setAttribute(PAGE_SPACER_KEY_ATTRIBUTE, key);
+    }
+
     return spacer;
+}
+
+/** A spacer whose rendered result does not match the page grid. */
+export interface TiptapPageSpacerCorrection {
+    /** Identifies the spacer that produced this correction. */
+    key: string | null;
+    /** The spacer element, for callers that adjust the DOM directly. */
+    element: HTMLElement;
+    /** Height the spacer currently renders at. */
+    currentHeight: number;
+    /** Height that lands the following content on the page grid. */
+    correctedHeight: number;
+}
+
+/**
+ * Measures where applied spacers actually put their content, and corrects them.
+ *
+ * Model error is unavoidable: fractional line heights, web fonts, and anonymous
+ * block boxes all shift content by a pixel or two, and any mismatch between the
+ * measured origin and the page grid shows up as a visible gap. Content resumes
+ * exactly at the spacer's bottom edge, so comparing that edge with the printable
+ * top of the page it landed on turns any residual error into a correction.
+ *
+ * @param root - Rendered `.ProseMirror` element or export clone, already paginated.
+ * @param geometry - Normalized page geometry for the current surface.
+ * @param tolerance - Ignore differences at or below this many pixels.
+ * @returns One entry per spacer that needs a different height.
+ */
+export function measureTiptapPageSpacerCorrections(
+    root: HTMLElement,
+    geometry: TiptapPageGeometry,
+    tolerance = SPACER_CORRECTION_TOLERANCE_PX,
+): TiptapPageSpacerCorrection[] {
+    const context = createRootMeasureContext(root);
+    const spacers = Array.from(
+        root.querySelectorAll<HTMLElement>(`[${PAGE_SPACER_ATTRIBUTE}]`),
+    );
+
+    return spacers.flatMap((element) => {
+        const rect = element.getBoundingClientRect();
+        const currentHeight = toDocumentLength(context, rect.height);
+
+        if (currentHeight <= 0) {
+            return [];
+        }
+
+        // Content after a spacer starts exactly at the spacer's bottom edge.
+        const contentTop = toDocumentTop(context, rect.bottom);
+        const region = getTiptapPageRegionAt(geometry, contentTop);
+        const delta = contentTop - region.printableTop;
+
+        if (Math.abs(delta) <= tolerance) {
+            return [];
+        }
+
+        const correctedHeight = Math.max(0, Math.round(currentHeight - delta));
+
+        if (correctedHeight === Math.round(currentHeight)) {
+            return [];
+        }
+
+        return [{
+            key: element.getAttribute(PAGE_SPACER_KEY_ATTRIBUTE),
+            element,
+            currentHeight: Math.round(currentHeight),
+            correctedHeight,
+        }];
+    });
 }
