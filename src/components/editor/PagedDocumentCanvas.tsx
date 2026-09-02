@@ -7,6 +7,7 @@ import type { CommentAnchorInput } from '@/store/editor/comment-anchor-extension
 import { RichTextEditor } from './RichTextEditor';
 import { A4_PAPER_WIDTH_PX } from '@/constants/document-paper';
 import type { DocumentHeaderFooter } from '@/lib/document-layout';
+import type { TiptapPageGeometryInput } from '@/lib/tiptap/tiptap-page-geometry';
 
 interface PagedDocumentCanvasProps {
     canvasRef: RefObject<HTMLDivElement | null>;
@@ -23,6 +24,8 @@ interface PagedDocumentCanvasProps {
     showFormattingMarks: boolean;
     paperStyle: CSSProperties;
     headerFooter: DocumentHeaderFooter;
+    /** Page geometry used to paginate the editable surface. */
+    pageGeometry?: TiptapPageGeometryInput;
     showRepeatedPageChrome?: boolean;
     pageGap?: number;
     overlayContent?: ReactNode;
@@ -101,6 +104,7 @@ export function PagedDocumentCanvas({
     showFormattingMarks,
     paperStyle,
     headerFooter,
+    pageGeometry,
     overlayContent,
     commentAnchors,
     onContentChange,
@@ -158,6 +162,7 @@ export function PagedDocumentCanvas({
                             pageNumber={1}
                             pageCount={pageCount}
                             paperStyle={paperStyle}
+                            pageGeometry={pageGeometry}
                             overlayContent={overlayContent}
                             commentAnchors={commentAnchors}
                         />
