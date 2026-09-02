@@ -1390,6 +1390,22 @@ body {
     break-inside: avoid;
     page-break-inside: avoid;
 }
+/*
+ * A table row cannot host a spacer element — the HTML parser pulls stray nodes
+ * out of a table — so a row that starts a new page is pushed by padding its
+ * cells instead. The pushed area keeps no top border so the seam stays clean.
+ */
+.tiptap-editor .ProseMirror tr.document-page-row-offset > td,
+.tiptap-editor .ProseMirror tr.document-page-row-offset > th {
+    padding-top: calc(8px + var(--document-page-row-offset, 0px));
+    border-top-color: transparent;
+    background-clip: padding-box;
+}
+.document-pagination-measuring tr.document-page-row-offset > td,
+.document-pagination-measuring tr.document-page-row-offset > th {
+    padding-top: 8px;
+    border-top-color: inherit;
+}
 .tiptap-editor .ProseMirror td,
 .tiptap-editor .ProseMirror th {
     background: #fff;
