@@ -1,0 +1,141 @@
+/**
+ * Regression tests for line-aware Gracon page layout planning.
+ */
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { createTiptapPageGeometry } from '../../src/lib/tiptap/tiptap-page-geometry.ts';
+import {
+    planTiptapPageLayout,
+    type TiptapPageBlockLayoutInput,
+    type TiptapPageLineMeasurement,
+} from '../../src/lib/tiptap/tiptap-page-layout-plan.ts';
+
+const GEOMETRY = createTiptapPageGeometry({
+    pageHeight: 1000,
+    headerHeight: 40,
+    footerHeight: 50,
+    margins: { top: 60, right: 80, bottom: 70, left: 80 },
+});
+
+/** Builds evenly spaced line boxes for a paragraph starting at `top`. */
+function buildLines(top: number, count: number, lineHeight = 20): TiptapPageLineMeasurement[] {
+    return Array.from({ length: count }, (_, index) => ({
+        top: top + (index * lineHeight),
+        bottom: top + (index * lineHeight) + lineHeight,
+    }));
+}
+
+/** Builds a splittable paragraph block from its line boxes. */
+function buildParagraph(top: number, lineCount: number, lineHeight = 20): TiptapPageBlockLayoutInput {
+    return {
+        top,
+        height: lineCount * lineHeight,
+        splittable: true,
+        lines: buildLines(top, lineCount, lineHeight),
+    };
+}
+
+test('paragraphs that fit on the current page are left untouched', () => {
+    const [plan] = planTiptapPageLayout(GEOMETRY, [buildParagraph(200, 4)]);
+
+    assert.deepEqual(plan, { offset: 0, spacers: [], overflow: false, mode: 'none' });
+});
+
+test('a paragraph crossing the footer continues on the next page at a line boundary', () => {
+    // Lines run 820-840, 840-860, 860-880, 880-900: the fourth line crosses the
+    // printable bottom of 880 and must start on page two.
+    const [plan] = planTiptapPageLayout(GEOMETRY, [buildParagraph(820, 4)]);
+
+    assert.equal(plan.mode, 'line-split');
+    assert.equal(plan.offset, 0);
+    assert.deepEqual(plan.spacers, [{ lineIndex: 3, height: 220 }]);
+    assert.equal(plan.overflow, false);
+});
+
+test('a paragraph longer than one page splits once per page seam', () => {
+    const plan = planTiptapPageLayout(GEOMETRY, [buildParagraph(100, 80)])[0];
+
+    assert.equal(plan.mode, 'line-split');
+    assert.equal(plan.overflow, false);
+    assert.equal(plan.spacers.length, 2);
+    assert.deepEqual(plan.spacers.map((spacer) => spacer.lineIndex), [39, 78]);
+});
+
+test('a paragraph whose first line does not fit moves as a whole instead of splitting', () => {
+    const [plan] = planTiptapPageLayout(GEOMETRY, [buildParagraph(870, 3)]);
+
+    assert.equal(plan.offset, 230);
+    assert.deepEqual(plan.spacers, []);
+    assert.equal(plan.mode, 'automatic-offset');
+});
+
+test('later blocks are measured after earlier line splits displace them', () => {
+    const plans = planTiptapPageLayout(GEOMETRY, [
+        buildParagraph(820, 4),
+        { top: 900, height: 40 },
+    ]);
+
+    // The paragraph pushed 220px of content down, so the following block starts
+    // at 1120 — inside page two's printable region, needing no offset.
+    assert.deepEqual(plans[1], { offset: 0, spacers: [], overflow: false, mode: 'none' });
+});
+
+test('manual page breaks still move a splittable block to the next page', () => {
+    const [plan] = planTiptapPageLayout(GEOMETRY, [
+        { ...buildParagraph(320, 2), forceNextPage: true },
+    ]);
+
+    assert.equal(plan.mode, 'manual-break');
+    assert.equal(plan.offset, 780);
+    assert.deepEqual(plan.spacers, []);
+});
+
+test('manual breaks on long paragraphs move the block and then split it', () => {
+    const [plan] = planTiptapPageLayout(GEOMETRY, [
+        { ...buildParagraph(320, 60), forceNextPage: true },
+    ]);
+
+    assert.equal(plan.mode, 'manual-break');
+    assert.equal(plan.offset, 780);
+    assert.equal(plan.spacers.length, 1);
+});
+
+test('unsplittable blocks keep whole-block behavior', () => {
+    const plans = planTiptapPageLayout(GEOMETRY, [
+        { top: 850, height: 60 },
+        { top: 910, height: 900 },
+    ]);
+
+    assert.deepEqual(plans[0], { offset: 250, spacers: [], overflow: false, mode: 'automatic-offset' });
+    assert.equal(plans[1].mode, 'oversized-overflow');
+    assert.equal(plans[1].overflow, true);
+});
+
+test('a single line taller than a printable page is reported as overflow', () => {
+    const [plan] = planTiptapPageLayout(GEOMETRY, [{
+        top: 100,
+        height: 900,
+        splittable: true,
+        lines: [
+            { top: 100, bottom: 1000 },
+            { top: 1000, bottom: 1020 },
+        ],
+    }]);
+
+    assert.equal(plan.overflow, true);
+});
+
+test('blocks starting inside the page header are pushed into the printable area', () => {
+    const [plan] = planTiptapPageLayout(GEOMETRY, [{ top: 20, height: 40 }]);
+
+    assert.deepEqual(plan, { offset: 80, spacers: [], overflow: false, mode: 'automatic-offset' });
+});
+
+test('planning never mutates the measurements it was given', () => {
+    const blocks = [buildParagraph(820, 4)];
+    const snapshot = JSON.stringify(blocks);
+
+    planTiptapPageLayout(GEOMETRY, blocks);
+
+    assert.equal(JSON.stringify(blocks), snapshot);
+});
