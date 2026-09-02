@@ -70,11 +70,21 @@ Two measurement rules are easy to get wrong and both produce visible gaps:
   every measurement is divided by the measured scale.
 
 Because measurement is planned, applied, and then verified, a plan is never
-trusted on its own: `measureTiptapPageSpacerCorrections` re-reads where each
-applied spacer actually put its content and rewrites heights that missed the
-printable top. Corrections are bounded (three passes) and idempotent. The live
-extension also fingerprints the unpaginated measurement, so the resize observer
-firing on its own height change cannot replan back over a correction.
+trusted on its own. Every planned offset carries the absolute page coordinate it
+targets, and `measureTiptapPageOffsetCorrections` re-reads where the content
+after it actually rendered. Two rules make this safe:
+
+- Corrections compare against the stored target, never against a page re-derived
+  from where the content landed. Content that overshot into a page gap must be
+  pushed forward to its target, not dragged back onto the page above it.
+- Corrections are cumulative, planned by `planTiptapPageOffsetCorrections` in
+  document order. Each offset's error moves everything below it, so a few pixels
+  per seam compound into a large hole dozens of pages later; carrying the shift
+  already applied above an offset corrects the whole document in one pass.
+
+Corrections are bounded (three passes) and idempotent. The live extension also
+fingerprints the unpaginated measurement, so the resize observer firing on its
+own height change cannot replan back over a correction.
 
 Only the renderers differ:
 
@@ -94,8 +104,16 @@ TipTap, and never write measured page state into TipTap JSON.
 ## Line Splitting Rules
 
 Paragraphs, headings, and blockquotes split at line boundaries. List blocks
-paginate per list item. Tables, images, and signature blocks still move as one
-unit because they have no supported split point yet.
+paginate per list item, and tables paginate per row, so a long table continues on
+the next page instead of moving or overlapping page chrome. Images and signature
+blocks still move as one unit because they have no split point.
+
+Table rows are offset differently from every other block: a spacer element
+between rows is pulled out of the table by the HTML parser, so a row that starts
+a new page is pushed by padding its cells (`document-page-row-offset`) instead.
+The row box still begins at the seam, so the pushed row's top border is hidden
+and its cell box crosses the inter-page gap. Splitting the table node itself
+would be a document mutation and is not allowed here.
 
 A block whose first line does not fit moves as a whole, so no line is ever left
 inside footer chrome. Later lines receive spacers instead of moving the block,
