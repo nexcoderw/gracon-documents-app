@@ -1,12 +1,13 @@
 'use client';
 
 // Owns the modal print-preview shell while keeping export on the stable Gracon canvas.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { saveRenderedDocumentAs } from '@/lib/export-document';
 import { DEFAULT_DOCUMENT_LAYOUT, type DocumentLayout } from '@/lib/document-layout';
 import { buildDocumentLayoutStyle } from '@/lib/document-layout';
 import { PagedDocumentCanvas } from './PagedDocumentCanvas';
+import { A4_PAPER_HEIGHT_PX } from '@/constants/document-paper';
 import type { CommentAnchorInput } from '@/store/editor/comment-anchor-extension';
 import { Button } from '@/components/ui';
 import styles from './DocumentPrintPreviewDialog.module.css';
@@ -154,6 +155,15 @@ export function DocumentPrintPreviewDialog({
     const emptyAnchors: CommentAnchorInput[] = [];
     const previewLayout = getPreviewLayout(layout);
     const previewPaperStyle = buildDocumentLayoutStyle(previewLayout);
+    const previewPageGeometry = useMemo(
+        () => ({
+            pageHeight: A4_PAPER_HEIGHT_PX,
+            // Preview pages sit flush so they match exported page slices.
+            pageGap: 0,
+            margins: previewLayout.margins,
+        }),
+        [previewLayout.margins],
+    );
     const preparedPdfExportSource: PrintPreviewExportSource = 'gracon-canvas';
     const continuousPreviewCanvas = (
         <PagedDocumentCanvas
@@ -171,6 +181,7 @@ export function DocumentPrintPreviewDialog({
             showFormattingMarks={false}
             paperStyle={previewPaperStyle}
             headerFooter={previewLayout.headerFooter}
+            pageGeometry={previewPageGeometry}
             showRepeatedPageChrome
             pageGap={0}
             overlayContent={overlayContent}
