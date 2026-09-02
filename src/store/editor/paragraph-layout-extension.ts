@@ -45,6 +45,10 @@ declare module '@tiptap/core' {
              * Toggles whether selected paragraphs/headings start on a new page.
              */
             toggleParagraphPageBreakBefore: () => ReturnType;
+            /**
+             * Starts a new page at the cursor, splitting the block when needed.
+             */
+            insertPageBreakAtCursor: () => ReturnType;
         };
     }
 }
@@ -446,6 +450,31 @@ export const ParagraphLayoutExtension = Extension.create({
                     (attrs) => normalizePageBreakBefore(attrs.pageBreakBefore) === nextValue,
                 );
             },
+            insertPageBreakAtCursor: () => ({ state, chain }) => {
+                const setBreak = (
+                    innerState: EditorState,
+                    innerDispatch: ((tr: Transaction) => void) | undefined,
+                ) => setSelectedParagraphAttrs(
+                    innerState,
+                    innerDispatch,
+                    (attrs) => ({ ...attrs, pageBreakBefore: true }),
+                    (attrs) => normalizePageBreakBefore(attrs.pageBreakBefore),
+                );
+
+                // At the start of a block the block itself opens the new page;
+                // mid-block the text after the cursor becomes the new page.
+                if (state.selection.empty && state.selection.$from.parentOffset === 0) {
+                    return chain()
+                        .command(({ state: innerState, dispatch }) => setBreak(innerState, dispatch))
+                        .run();
+                }
+
+                return chain()
+                    .deleteSelection()
+                    .splitBlock()
+                    .command(({ state: innerState, dispatch }) => setBreak(innerState, dispatch))
+                    .run();
+            },
         };
     },
 
@@ -453,6 +482,8 @@ export const ParagraphLayoutExtension = Extension.create({
         return {
             Tab: () => this.editor.commands.insertContent('\t'),
             'Shift-Tab': () => false,
+            // Matches the Google Docs page-break shortcut.
+            'Mod-Enter': () => this.editor.commands.insertPageBreakAtCursor(),
         };
     },
 
