@@ -37,6 +37,13 @@ export interface TiptapPageLineSpacer {
     lineIndex: number;
     /** Spacer height in CSS pixels. */
     height: number;
+    /**
+     * Document coordinate this spacer is meant to place its line at. Applied
+     * spacers are verified against this target instead of a re-derived page, so
+     * content that lands in a page gap is pushed forward rather than dragged
+     * back onto the page above it.
+     */
+    targetTop: number;
 }
 
 /** How a block was resolved against the page grid. */
@@ -51,6 +58,8 @@ export type TiptapPageBlockLayoutMode =
 export interface TiptapPageBlockLayoutPlan {
     /** Space added before the block, moving it down the page grid. */
     offset: number;
+    /** Document coordinate the offset is meant to place the block at. */
+    targetTop: number;
     /** Line-level spacers that continue the block on later pages. */
     spacers: TiptapPageLineSpacer[];
     /** True when the block still cannot fit inside a printable region. */
@@ -166,7 +175,7 @@ function planWholeBlock(
                 ? 'oversized-overflow'
                 : 'none';
 
-    return { offset, spacers: [], overflow, mode };
+    return { offset, targetTop: placedTop, spacers: [], overflow, mode };
 }
 
 /**
@@ -215,7 +224,7 @@ function planSplittableBlock(
             return;
         }
 
-        spacers.push({ lineIndex: index, height: push });
+        spacers.push({ lineIndex: index, height: push, targetTop: top + push });
         lineCarry += push;
     });
 
@@ -229,7 +238,13 @@ function planSplittableBlock(
                     ? 'oversized-overflow'
                     : 'none';
 
-    return { offset, spacers, overflow, mode };
+    return {
+        offset,
+        targetTop: (lines[0]?.top ?? block.top) + carry + offset,
+        spacers,
+        overflow,
+        mode,
+    };
 }
 
 /**
@@ -246,8 +261,9 @@ export function planTiptapPageLayout(
     let carry = 0;
 
     if (geometry.printableHeight <= 0) {
-        return blocks.map(() => ({
+        return blocks.map((block) => ({
             offset: 0,
+            targetTop: block.top,
             spacers: [],
             overflow: false,
             mode: 'none' as const,
@@ -291,4 +307,67 @@ export function calculateTiptapCumulativePageBlockOffsets(
         geometry,
         blocks.map((block) => ({ top: block.top, height: block.height, forceNextPage: block.forceNextPage })),
     ).map((plan) => ({ offset: plan.offset, overflow: plan.overflow, mode: plan.mode }));
+}
+
+/** A rendered offset measured against the target it was planned for. */
+export interface TiptapPageOffsetMeasurement {
+    /** Identifies the applied offset. */
+    key: string;
+    /** Height the offset currently renders at. */
+    height: number;
+    /** Document coordinate the offset was meant to place content at. */
+    targetTop: number;
+    /** Where the content after the offset actually rendered. */
+    measuredTop: number;
+}
+
+/** A corrected height for one applied offset. */
+export interface TiptapPageOffsetCorrectionPlan {
+    key: string;
+    currentHeight: number;
+    correctedHeight: number;
+}
+
+/**
+ * Plans height corrections for offsets that missed their target.
+ *
+ * Corrections are cumulative on purpose. Each offset's error moves everything
+ * below it, so a few pixels per page seam compound into a visible hole further
+ * down the document. Walking offsets in document order and carrying the shift
+ * already applied above them corrects the whole document in one pass instead of
+ * chasing the drift page by page.
+ *
+ * @param measurements - Applied offsets in document order, with rendered tops.
+ * @param tolerance - Ignore differences at or below this many pixels.
+ * @returns One entry per offset whose height must change.
+ */
+export function planTiptapPageOffsetCorrections(
+    measurements: TiptapPageOffsetMeasurement[],
+    tolerance = 1,
+): TiptapPageOffsetCorrectionPlan[] {
+    const corrections: TiptapPageOffsetCorrectionPlan[] = [];
+    let cumulativeShift = 0;
+
+    measurements.forEach((measurement) => {
+        const delta = (measurement.measuredTop + cumulativeShift) - measurement.targetTop;
+
+        if (Math.abs(delta) <= tolerance) {
+            return;
+        }
+
+        const correctedHeight = Math.max(0, Math.round(measurement.height - delta));
+
+        if (correctedHeight === Math.round(measurement.height)) {
+            return;
+        }
+
+        cumulativeShift += correctedHeight - measurement.height;
+        corrections.push({
+            key: measurement.key,
+            currentHeight: Math.round(measurement.height),
+            correctedHeight,
+        });
+    });
+
+    return corrections;
 }
