@@ -80,16 +80,13 @@ This application lets users create, organize, edit, share, sign, verify, and rev
 - Print preview owns a cleanup audit for stale export roots: temporary export hosts, readiness timers, and DOM refs must be cleared when saving finishes or the preview unmounts
 - Gracon-owned page break and pagination architecture is documented in `docs/gracon-owned-pagination-architecture.md`
 - Live editor pagination metrics now derive active page, page count, per-page ruler pages, and heading outline data from the rendered TipTap document without writing measurement state into document JSON
-- Live editor pagination uses one shared layout engine (`src/lib/tiptap/tiptap-page-layout-plan.ts`) for the editor and export clones, so page seams land in the same place on canvas, in print preview, and in the exported PDF
-- Live editor pages use a Google Docs-style gray gap between page surfaces, while PDF export keeps page gaps collapsed to preserve print geometry
-- Text blocks split at line boundaries: a paragraph that no longer fits continues on the next page instead of running through the footer, page gap, and next header. Lists paginate per item; tables, images, and signature blocks still move as one unit
-- Live pagination spacers are ProseMirror widget decorations, so page layout never reaches autosave, copy/paste, DOCX export, or read-only rules; export clones receive the same spacers as inert DOM elements
-- Page seams keep a safety margin above the footer and below the header (`PAPER_CONTENT_SAFETY_PX` / `--paper-content-safety`), so a break never leaves text flush against page chrome
-- Applied page offsets are verified against the absolute coordinate they were planned for, and corrected cumulatively in document order, so per-seam error cannot compound into a visible gap further down a long document
-- Tables paginate per row, so part of a table can sit on one page and the rest on the next; rows are offset by cell padding because a spacer between table rows would be pulled out of the table by the HTML parser
-- A page break on content that already starts a page adds no extra space
-- Blocks that genuinely cannot be paginated — content taller than one printable page — are still marked as render-only overflow without mutating TipTap JSON
-- `Ctrl/Cmd+Enter` inserts a Google Docs-style page break at the cursor, splitting the block so the text after the cursor opens the new page
+- The editable editor is one continuous TipTap surface with no page seams; pagination is resolved in the download preview, which is the only place page surgery is safe
+- Print preview paginates the surface the user is looking at and the PDF is captured from that same surface, so the download cannot disagree with the preview
+- `Save as PDF` opens the preview first and downloads from there; `Save as DOCX` stays a direct download because Word repaginates a flow document itself
+- Pagination runs as one forward pass: each block, line, and table row is measured as it is reached, after every earlier fix is applied, so per-seam error cannot compound down a long document
+- Text blocks continue at line boundaries and tables continue as a real continuation table with the header row repeated
+- Page seams keep a safety margin above the footer and below the header (`PAPER_CONTENT_SAFETY_PX` / `--paper-content-safety`)
+- `Ctrl/Cmd+Enter` inserts a page break at the cursor, splitting the block so the text after the cursor opens the new page
 - The editor includes a collapsible document outline generated from heading positions so long documents can be navigated before schema-backed page breaks are introduced
 - Insert-menu comment creation is wired through the existing comments drawer and selected-text anchors while comment history remains bounded and cursor-paginated
 - Page-break-before is now schema-backed on paragraph-like nodes, exposed through the insert menu, visible in formatting-mark mode, and preserved through live layout, PDF capture, DOCX export, and DOCX import
