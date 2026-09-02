@@ -4,7 +4,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-    calculateTiptapCumulativePageBlockOffsets,
     calculateTiptapPageBlockOffset,
     createTiptapExportPageGeometry,
     createTiptapLivePageGeometry,
@@ -13,6 +12,7 @@ import {
     isTiptapPageBlockOverflowing,
     isTiptapPageBlockOversized,
 } from '../../src/lib/tiptap/tiptap-page-geometry.ts';
+import { calculateTiptapCumulativePageBlockOffsets } from '../../src/lib/tiptap/tiptap-page-layout-plan.ts';
 
 test('createTiptapPageGeometry builds printable page bounds from margins and chrome', () => {
     const geometry = createTiptapPageGeometry({
