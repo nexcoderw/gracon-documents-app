@@ -1,241 +1,306 @@
 /**
- * Applies page layout to a static rendered document surface.
+ * Paginates a rendered document surface for preview and export.
  *
- * The live editor paginates through ProseMirror decorations, because inserting
- * nodes into a contenteditable surface from outside TipTap would corrupt the
- * document model. Export clones are inert DOM, so they receive the same spacer
- * elements directly. Both paths share one planner, so a PDF page break lands
- * where the editor drew it.
+ * The editable editor is one continuous TipTap surface. Pagination happens here,
+ * on the static copy the user previews before downloading, which is the only
+ * place real page surgery is safe: this code moves and splits rendered nodes,
+ * which would corrupt the document model if it ran on a live ProseMirror view.
+ *
+ * The pass walks the document once in reading order. Each unit is measured at
+ * the moment it is reached — after every earlier fix has already been applied —
+ * so a placement is always decided against the true rendered position and error
+ * cannot accumulate down a long document.
  */
 import {
+    createTiptapDocumentMetrics,
     createTiptapPageSpacerElement,
     findTiptapLineStartPoint,
-    measureTiptapPageBlocks,
-    measureTiptapPageOffsetCorrections,
-    applyTiptapPageRowOffset,
-    clearTiptapPageRowOffsets,
-    PAGE_MEASURING_CLASS,
+    measureTiptapBlockLines,
+    readTiptapDocumentBounds,
     PAGE_SPACER_ATTRIBUTE,
-    type TiptapAppliedPageOffset,
-    type TiptapLineStartPoint,
-    type TiptapMeasuredPageBlock,
+    type TiptapDocumentMetrics,
 } from '@/lib/tiptap/tiptap-page-layout-dom';
-import { planTiptapPageLayout } from '@/lib/tiptap/tiptap-page-layout-plan';
+import { resolveTiptapPlacement } from '@/lib/tiptap/tiptap-page-layout-plan';
+import { splitTiptapTableAtRow } from '@/lib/tiptap/tiptap-table-pagination';
 import {
     createTiptapPageGeometry,
+    type TiptapPageGeometry,
     type TiptapPageGeometryInput,
 } from '@/lib/tiptap/tiptap-page-geometry';
-import type { TiptapPageBlockLayoutPlan } from '@/lib/tiptap/tiptap-page-layout-plan';
 
 const PAGE_OVERFLOW_ATTR = 'data-document-page-overflow';
 
-/** Correction attempts allowed before a surface is accepted as-is. */
-const MAX_CORRECTION_PASSES = 3;
+/** Blocks whose lines may be separated across a page boundary. */
+const SPLITTABLE_BLOCK_SELECTOR = 'p, h1, h2, h3, h4, h5, h6, blockquote';
 
-/** One block's planned spacers, resolved to DOM insertion points. */
-interface PlannedSpacerInsertion {
-    block: TiptapMeasuredPageBlock;
-    plan: TiptapPageBlockLayoutPlan;
-    linePoints: Array<{ point: TiptapLineStartPoint; height: number; targetTop: number }>;
-}
-const LEGACY_OFFSET_VARS = [
-    '--document-page-break-before-offset',
-    '--document-page-auto-offset',
-];
+/** Guard against a pathological document looping forever inside one unit. */
+const MAX_SPLITS_PER_UNIT = 200;
 
-export interface TiptapPageLayoutOffsetResult {
-    manualOffsetCount: number;
-    automaticOffsetCount: number;
+export interface TiptapPaginationResult {
+    /** Page count the paginated surface now occupies. */
+    pageCount: number;
+    /** Blocks moved to the next page whole. */
+    pushedBlockCount: number;
+    /** Blocks continued across a page at a line boundary. */
     lineSplitCount: number;
-    overflowBlockCount: number;
+    /** Tables continued on a later page. */
+    tableSplitCount: number;
+    /** Units too tall for any page, left in place and marked. */
+    overflowCount: number;
+}
+
+function createEmptyResult(): TiptapPaginationResult {
+    return {
+        pageCount: 1,
+        pushedBlockCount: 0,
+        lineSplitCount: 0,
+        tableSplitCount: 0,
+        overflowCount: 0,
+    };
 }
 
 /**
  * Removes every pagination artifact from a rendered surface.
  *
- * @param root - Rendered `.ProseMirror` element or export clone.
+ * @param root Rendered `.ProseMirror` element or export clone.
  */
-export function clearTiptapPageLayoutOffsets(root: HTMLElement) {
+export function clearTiptapPageLayout(root: HTMLElement) {
     root.querySelectorAll(`[${PAGE_SPACER_ATTRIBUTE}]`).forEach((spacer) => spacer.remove());
-    clearTiptapPageRowOffsets(root);
     root.querySelectorAll<HTMLElement>(`[${PAGE_OVERFLOW_ATTR}]`).forEach((element) => {
         element.removeAttribute(PAGE_OVERFLOW_ATTR);
     });
-    root.querySelectorAll<HTMLElement>('[style]').forEach((element) => {
-        LEGACY_OFFSET_VARS.forEach((variable) => element.style.removeProperty(variable));
-    });
 }
 
-function insertSpacerBeforeBlock(element: HTMLElement, height: number, key: string) {
-    const spacer = createTiptapPageSpacerElement(element.ownerDocument, height, key);
+function insertSpacerBefore(element: Element, height: number) {
+    const spacer = createTiptapPageSpacerElement(element.ownerDocument, height);
     element.parentElement?.insertBefore(spacer, element);
 }
 
-function insertSpacerAtPoint(
-    ownerDocument: Document,
-    point: TiptapLineStartPoint,
-    height: number,
-    key: string,
-) {
-    const range = ownerDocument.createRange();
+/**
+ * Continues a text block on the next page at its first line that does not fit.
+ *
+ * @param metrics Coordinate conversion for the surface.
+ * @param geometry Normalized page geometry.
+ * @param block Block being placed.
+ * @returns True when a line spacer was inserted.
+ */
+function splitBlockAtLine(
+    metrics: TiptapDocumentMetrics,
+    geometry: TiptapPageGeometry,
+    block: HTMLElement,
+): boolean {
+    const lines = measureTiptapBlockLines(metrics, block);
 
-    try {
-        range.setStart(point.node, point.offset);
-        range.collapse(true);
-        range.insertNode(createTiptapPageSpacerElement(ownerDocument, height, key));
-    } finally {
-        range.detach();
+    for (const line of lines) {
+        const placement = resolveTiptapPlacement(geometry, {
+            top: line.top,
+            bottom: line.bottom,
+        });
+
+        if (placement.action !== 'push' || placement.push <= 0) {
+            continue;
+        }
+
+        const point = findTiptapLineStartPoint(metrics, block, line.top);
+        if (!point) {
+            return false;
+        }
+
+        const range = block.ownerDocument.createRange();
+        try {
+            range.setStart(point.node, point.offset);
+            range.collapse(true);
+            range.insertNode(
+                createTiptapPageSpacerElement(block.ownerDocument, placement.push),
+            );
+        } finally {
+            range.detach();
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Places one text or media block, continuing it across pages when it is long.
+ *
+ * @param metrics Coordinate conversion for the surface.
+ * @param geometry Normalized page geometry.
+ * @param block Block to place.
+ * @param result Running totals for the pass.
+ */
+function placeBlock(
+    metrics: TiptapDocumentMetrics,
+    geometry: TiptapPageGeometry,
+    block: HTMLElement,
+    result: TiptapPaginationResult,
+) {
+    const splittable = block.matches(SPLITTABLE_BLOCK_SELECTOR)
+        && (block.textContent?.trim().length ?? 0) > 0;
+
+    for (let attempt = 0; attempt < MAX_SPLITS_PER_UNIT; attempt += 1) {
+        const bounds = readTiptapDocumentBounds(metrics, block);
+        const placement = resolveTiptapPlacement(geometry, {
+            top: bounds.top,
+            bottom: bounds.bottom,
+            forceNextPage: block.getAttribute('data-page-break-before') === 'true',
+            splittable,
+        });
+
+        if (placement.action === 'keep') {
+            return;
+        }
+
+        if (placement.action === 'push') {
+            insertSpacerBefore(block, placement.push);
+            result.pushedBlockCount += 1;
+
+            // A pushed block can still be longer than the page it landed on.
+            if (!splittable) {
+                return;
+            }
+            continue;
+        }
+
+        if (placement.action === 'split') {
+            if (!splitBlockAtLine(metrics, geometry, block)) {
+                block.setAttribute(PAGE_OVERFLOW_ATTR, 'true');
+                result.overflowCount += 1;
+                return;
+            }
+
+            result.lineSplitCount += 1;
+            continue;
+        }
+
+        block.setAttribute(PAGE_OVERFLOW_ATTR, 'true');
+        result.overflowCount += 1;
+        return;
     }
 }
 
 /**
- * Paginates a static rendered surface with block and line spacers.
+ * Finds the first row of a table that crosses its page's printable bottom.
  *
- * @param root - Rendered `.ProseMirror` clone to paginate.
- * @param input - Page geometry options for the current document layout.
- * @returns Counts describing how the pass resolved the document.
+ * @param metrics Coordinate conversion for the surface.
+ * @param geometry Normalized page geometry.
+ * @param table Table being measured.
+ * @returns The crossing row, or null when every row fits.
  */
-export function applyTiptapPageLayoutOffsets(
+function findFirstCrossingRow(
+    metrics: TiptapDocumentMetrics,
+    geometry: TiptapPageGeometry,
+    table: HTMLTableElement,
+): HTMLTableRowElement | null {
+    for (const row of Array.from(table.rows)) {
+        const bounds = readTiptapDocumentBounds(metrics, row);
+        const placement = resolveTiptapPlacement(geometry, {
+            top: bounds.top,
+            bottom: bounds.bottom,
+        });
+
+        if (placement.action !== 'keep') {
+            return row;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Places a table, continuing it on later pages one row boundary at a time.
+ *
+ * @param metrics Coordinate conversion for the surface.
+ * @param geometry Normalized page geometry.
+ * @param table Table to place.
+ * @param result Running totals for the pass.
+ */
+function placeTable(
+    metrics: TiptapDocumentMetrics,
+    geometry: TiptapPageGeometry,
+    table: HTMLTableElement,
+    result: TiptapPaginationResult,
+) {
+    let current: HTMLTableElement | null = table;
+
+    for (let attempt = 0; current && attempt < MAX_SPLITS_PER_UNIT; attempt += 1) {
+        const bounds = readTiptapDocumentBounds(metrics, current);
+        const placement = resolveTiptapPlacement(geometry, {
+            top: bounds.top,
+            bottom: bounds.bottom,
+            forceNextPage: current.getAttribute('data-page-break-before') === 'true',
+        });
+
+        if (placement.action === 'keep') {
+            return;
+        }
+
+        if (placement.action === 'push') {
+            insertSpacerBefore(current, placement.push);
+            result.pushedBlockCount += 1;
+            continue;
+        }
+
+        // Longer than a page: continue at the first row that crosses the page,
+        // repeating the header row on the continuation table.
+        const crossingRow = findFirstCrossingRow(metrics, geometry, current);
+        const continuation: HTMLTableElement | null = crossingRow
+            ? splitTiptapTableAtRow(current, crossingRow)
+            : null;
+
+        if (!continuation) {
+            current.setAttribute(PAGE_OVERFLOW_ATTR, 'true');
+            result.overflowCount += 1;
+            return;
+        }
+
+        result.tableSplitCount += 1;
+        current = continuation;
+    }
+}
+
+/**
+ * Paginates a rendered document surface in place.
+ *
+ * @param root Rendered `.ProseMirror` element on a static preview/export copy.
+ * @param input Page geometry options for the current document layout.
+ * @returns Totals describing how the document was divided into pages.
+ */
+export function paginateTiptapDocument(
     root: HTMLElement,
     input: TiptapPageGeometryInput = {},
-): TiptapPageLayoutOffsetResult {
+): TiptapPaginationResult {
     const geometry = createTiptapPageGeometry(input);
-    const result: TiptapPageLayoutOffsetResult = {
-        manualOffsetCount: 0,
-        automaticOffsetCount: 0,
-        lineSplitCount: 0,
-        overflowBlockCount: 0,
-    };
+    const result = createEmptyResult();
 
-    clearTiptapPageLayoutOffsets(root);
+    clearTiptapPageLayout(root);
 
     if (geometry.pageHeight <= 0 || geometry.printableHeight <= 0) {
         return result;
     }
 
-    // Measure and resolve every insertion point while the surface is still
-    // unpaginated, then apply the spacers without measuring again.
-    root.classList.add(PAGE_MEASURING_CLASS);
-    const blocks = measureTiptapPageBlocks(root);
-    const plans = planTiptapPageLayout(geometry, blocks);
-    const insertions = blocks.map((block, index) => {
-        const plan = plans[index];
-        const linePoints = plan.spacers.flatMap((spacer) => {
-            const line = block.lines[spacer.lineIndex];
-            const point = line
-                ? findTiptapLineStartPoint(root, block.element, line.top)
-                : null;
+    const metrics = createTiptapDocumentMetrics(root);
 
-            return point
-                ? [{ point, height: spacer.height, targetTop: spacer.targetTop }]
-                : [];
-        });
+    // Siblings are re-read each step because splitting a table adds one.
+    let child = root.firstElementChild;
+    while (child) {
+        const next = child.nextElementSibling;
 
-        return { block, plan, linePoints };
-    });
-    root.classList.remove(PAGE_MEASURING_CLASS);
+        if (child instanceof HTMLTableElement) {
+            placeTable(metrics, geometry, child, result);
+        } else if (child instanceof HTMLElement && !child.hasAttribute(PAGE_SPACER_ATTRIBUTE)) {
+            placeBlock(metrics, geometry, child, result);
+        }
 
-    const applied = applyPlannedSpacers(insertions, result);
-    correctRenderedOffsets(root, applied);
+        child = next;
+    }
+
+    result.pageCount = Math.max(
+        1,
+        Math.ceil((root.scrollHeight + geometry.pageGap) / geometry.pagePitch),
+    );
 
     return result;
-}
-
-/**
- * Re-measures applied offsets and rewrites the ones that missed their target.
- *
- * @param root - Rendered surface that has already received its offsets.
- * @param applied - Offsets that were applied, with their planned targets.
- */
-function correctRenderedOffsets(root: HTMLElement, applied: TiptapAppliedPageOffset[]) {
-    let current = applied;
-
-    for (let pass = 0; pass < MAX_CORRECTION_PASSES; pass += 1) {
-        const corrections = measureTiptapPageOffsetCorrections(root, current);
-
-        if (corrections.length === 0) {
-            return;
-        }
-
-        const correctedHeights = new Map(
-            corrections.map((correction) => [correction.key, correction.correctedHeight]),
-        );
-
-        current = current.map((offset) => {
-            const height = correctedHeights.get(offset.key);
-            if (height === undefined) {
-                return offset;
-            }
-
-            const element = root.querySelector<HTMLElement>(
-                `[${PAGE_SPACER_ATTRIBUTE}][data-document-page-spacer-key="${offset.key}"]`,
-            );
-
-            if (element) {
-                element.style.height = `${height}px`;
-            } else {
-                const row = root.querySelector<HTMLElement>(
-                    `[data-document-page-row-key="${offset.key}"]`,
-                );
-                row?.style.setProperty('--document-page-row-offset', `${height}px`);
-            }
-
-            return { ...offset, height };
-        });
-    }
-}
-
-function applyPlannedSpacers(
-    insertions: PlannedSpacerInsertion[],
-    result: TiptapPageLayoutOffsetResult,
-): TiptapAppliedPageOffset[] {
-    const applied: TiptapAppliedPageOffset[] = [];
-
-    insertions.forEach(({ block, plan, linePoints }, index) => {
-        if (plan.overflow) {
-            block.element.setAttribute(PAGE_OVERFLOW_ATTR, 'true');
-            result.overflowBlockCount += 1;
-        }
-
-        if (plan.offset > 0) {
-            const key = `block-${index}`;
-
-            if (block.offsetMode === 'row-padding') {
-                applyTiptapPageRowOffset(block.element, plan.offset, key);
-            } else {
-                insertSpacerBeforeBlock(block.element, plan.offset, key);
-            }
-
-            applied.push({ key, targetTop: plan.targetTop, height: plan.offset });
-
-            if (plan.mode === 'manual-break') {
-                result.manualOffsetCount += 1;
-            } else {
-                result.automaticOffsetCount += 1;
-            }
-        }
-
-        // Later lines are inserted first: splitting a text node at a later
-        // offset keeps the earlier resolved points in that node valid. The
-        // applied list stays in document order, which corrections depend on.
-        [...linePoints].reverse().forEach((spacer, reverseIndex) => {
-            insertSpacerAtPoint(
-                block.element.ownerDocument,
-                spacer.point,
-                spacer.height,
-                `line-${index}-${linePoints.length - 1 - reverseIndex}`,
-            );
-            result.lineSplitCount += 1;
-        });
-
-        linePoints.forEach((spacer, lineIndex) => {
-            applied.push({
-                key: `line-${index}-${lineIndex}`,
-                targetTop: spacer.targetTop,
-                height: spacer.height,
-            });
-        });
-    });
-
-    return applied;
 }
