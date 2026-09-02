@@ -14,7 +14,7 @@ import {
 import { DEFAULT_DOCUMENT_LAYOUT, readDocumentLayoutFromElement } from '@/lib/document-layout';
 import type { DocumentLayoutMargins } from '@/lib/document-layout';
 import { createPaperExportGeometry } from '@/lib/document-layout-export-parity';
-import { applyTiptapPageLayoutOffsets } from '@/lib/tiptap/tiptap-page-breaks';
+import { paginateTiptapDocument } from '@/lib/tiptap/tiptap-page-breaks';
 import { createTiptapExportPageGeometry } from '@/lib/tiptap/tiptap-page-geometry';
 
 async function waitForRenderableAssets(rootEl: HTMLElement) {
@@ -77,7 +77,7 @@ function getContinuousExportPageCount(
 ) {
     const editorEl = frameEl.querySelector('.ProseMirror');
     if (editorEl instanceof HTMLElement) {
-        applyTiptapPageLayoutOffsets(editorEl, createTiptapExportPageGeometry({
+        paginateTiptapDocument(editorEl, createTiptapExportPageGeometry({
             pageHeight: A4_PAPER_HEIGHT_PX,
             margins,
         }));
@@ -163,7 +163,7 @@ function prepareExportFrame(
     });
     const editorEl = frameEl.querySelector('.ProseMirror');
     if (paginate && editorEl instanceof HTMLElement) {
-        applyTiptapPageLayoutOffsets(editorEl, createTiptapExportPageGeometry({
+        paginateTiptapDocument(editorEl, createTiptapExportPageGeometry({
             pageHeight: A4_PAPER_HEIGHT_PX,
             margins,
         }));
