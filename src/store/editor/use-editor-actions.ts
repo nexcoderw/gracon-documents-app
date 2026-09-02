@@ -362,10 +362,19 @@ export function useEditorActions({
             return;
         }
 
-        // ── File: Save as PDF / DOCX ───────────────────────────────────────────
-        if (actionId === 'file:save-as-pdf' || actionId === 'file:save-as-docx') {
+        // ── File: Save as PDF ──────────────────────────────────────────────────
+        // PDF is page-rendered, so it goes through the preview: the user sees
+        // the paginated document, then downloads exactly that. DOCX is a flow
+        // format that Word repaginates itself, so it downloads directly.
+        if (actionId === 'file:save-as-pdf') {
+            onViewAction?.('view:print-preview');
+            return;
+        }
+
+        // ── File: Save as DOCX ─────────────────────────────────────────────────
+        if (actionId === 'file:save-as-docx') {
             if (savingAs) return;
-            const format = actionId === 'file:save-as-pdf' ? 'pdf' : 'docx';
+            const format = 'docx' as const;
             setSavingAs(format);
             Promise.resolve()
                 .then(async () => {
