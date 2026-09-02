@@ -1,9 +1,12 @@
 'use client';
 
 // Owns the modal print-preview shell while keeping export on the stable Gracon canvas.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
+import type { Editor } from '@tiptap/react';
 import { saveRenderedDocumentAs } from '@/lib/export-document';
+import { paginateTiptapDocument } from '@/lib/tiptap/tiptap-page-breaks';
+import { createTiptapExportPageGeometry } from '@/lib/tiptap/tiptap-page-geometry';
 import { DEFAULT_DOCUMENT_LAYOUT, type DocumentLayout } from '@/lib/document-layout';
 import { buildDocumentLayoutStyle } from '@/lib/document-layout';
 import { PagedDocumentCanvas } from './PagedDocumentCanvas';
@@ -58,6 +61,29 @@ function getPreviewLayout(layout: DocumentLayout): DocumentLayout {
 
 type PrintPreviewExportSource = 'gracon-canvas';
 
+/**
+ * Waits for the fonts and images that change how the document paginates.
+ *
+ * @param root Rendered preview surface.
+ */
+async function waitForPreviewAssets(root: HTMLElement) {
+    if ('fonts' in document) {
+        await document.fonts.ready;
+    }
+
+    const images = Array.from(root.querySelectorAll('img'));
+    await Promise.all(images.map((image) => new Promise<void>((resolve) => {
+        if (image.complete) {
+            resolve();
+            return;
+        }
+
+        const finish = () => resolve();
+        image.addEventListener('load', finish, { once: true });
+        image.addEventListener('error', finish, { once: true });
+    })));
+}
+
 function removeDetachedPaginatedExportHosts() {
     document
         .querySelectorAll('[data-print-preview-export-host="true"]')
@@ -105,6 +131,11 @@ export function DocumentPrintPreviewDialog({
     const isMountedRef = useRef(false);
     const [savingPdf, setSavingPdf] = useState(false);
     const [zoom, setZoom] = useState(getPreviewZoom);
+    const previewLayout = getPreviewLayout(layout);
+    const previewPaperStyle = buildDocumentLayoutStyle(previewLayout);
+    const [previewEditor, setPreviewEditor] = useState<Editor | null>(null);
+    const [paginatedPageCount, setPaginatedPageCount] = useState(pageCount);
+    const [paginating, setPaginating] = useState(true);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -133,6 +164,37 @@ export function DocumentPrintPreviewDialog({
         };
     }, []);
 
+    // Pagination runs on the surface the user is looking at, so the preview and
+    // the downloaded PDF are the same rendered document rather than two attempts
+    // at the same layout.
+    useEffect(() => {
+        const root = previewCanvasRef.current?.querySelector('.ProseMirror');
+        if (!previewEditor || !(root instanceof HTMLElement)) return;
+
+        let cancelled = false;
+        setPaginating(true);
+
+        const run = async () => {
+            await waitForPreviewAssets(root);
+            if (cancelled) return;
+
+            const result = paginateTiptapDocument(root, createTiptapExportPageGeometry({
+                pageHeight: A4_PAPER_HEIGHT_PX,
+                margins: previewLayout.margins,
+            }));
+
+            if (cancelled) return;
+            setPaginatedPageCount(result.pageCount);
+            setPaginating(false);
+        };
+
+        void run();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [previewEditor, previewLayout.margins, content]);
+
     async function handleSavePdf() {
         setSavingPdf(true);
         try {
@@ -153,17 +215,6 @@ export function DocumentPrintPreviewDialog({
     }
 
     const emptyAnchors: CommentAnchorInput[] = [];
-    const previewLayout = getPreviewLayout(layout);
-    const previewPaperStyle = buildDocumentLayoutStyle(previewLayout);
-    const previewPageGeometry = useMemo(
-        () => ({
-            pageHeight: A4_PAPER_HEIGHT_PX,
-            // Preview pages sit flush so they match exported page slices.
-            pageGap: 0,
-            margins: previewLayout.margins,
-        }),
-        [previewLayout.margins],
-    );
     const preparedPdfExportSource: PrintPreviewExportSource = 'gracon-canvas';
     const continuousPreviewCanvas = (
         <PagedDocumentCanvas
@@ -174,19 +225,18 @@ export function DocumentPrintPreviewDialog({
             content={content}
             isReadOnly
             zoomScale={zoom}
-            pageCount={pageCount}
+            pageCount={paginatedPageCount}
             pageHeight={pageHeight}
             contentHeight={contentHeight}
             printLayout
             showFormattingMarks={false}
             paperStyle={previewPaperStyle}
             headerFooter={previewLayout.headerFooter}
-            pageGeometry={previewPageGeometry}
             showRepeatedPageChrome
             pageGap={0}
             overlayContent={overlayContent}
             commentAnchors={emptyAnchors}
-            onEditorReady={() => undefined}
+            onEditorReady={setPreviewEditor}
         />
     );
 
@@ -202,8 +252,10 @@ export function DocumentPrintPreviewDialog({
                 <div>
                     <p className={styles.eyebrow}>Print preview</p>
                     <h2 id="document-print-preview-title">{title}</h2>
-                    <span>
-                        {pageCount} page{pageCount === 1 ? '' : 's'} · Same geometry as PDF export
+                    <span aria-live="polite">
+                        {paginating
+                            ? 'Laying out pages…'
+                            : `${paginatedPageCount} page${paginatedPageCount === 1 ? '' : 's'} · Exactly what the PDF will contain`}
                     </span>
                 </div>
                 <div className={styles.actions}>
@@ -221,6 +273,7 @@ export function DocumentPrintPreviewDialog({
                         type="button"
                         loading={savingPdf}
                         loadingText="Preparing..."
+                        disabled={paginating}
                         onClick={() => { void handleSavePdf(); }}
                     >
                         Save PDF
