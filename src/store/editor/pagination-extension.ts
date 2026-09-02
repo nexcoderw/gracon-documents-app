@@ -17,8 +17,11 @@ import {
     createTiptapPageSpacerElement,
     findTiptapLineStartPoint,
     measureTiptapPageBlocks,
-    measureTiptapPageSpacerCorrections,
+    measureTiptapPageOffsetCorrections,
     PAGE_MEASURING_CLASS,
+    PAGE_ROW_KEY_ATTRIBUTE,
+    PAGE_ROW_OFFSET_CLASS,
+    PAGE_ROW_OFFSET_VAR,
     type TiptapMeasuredPageBlock,
 } from '@/lib/tiptap/tiptap-page-layout-dom';
 import { planTiptapPageLayout } from '@/lib/tiptap/tiptap-page-layout-plan';
@@ -38,11 +41,19 @@ const MAX_CORRECTION_PASSES = 3;
 
 export const paginationPluginKey = new PluginKey<PaginationPluginState>('documentPagination');
 
-/** One measured spacer waiting to be rendered as a decoration. */
+/** One measured offset waiting to be rendered as a decoration. */
 interface PaginationSpacerSpec {
     pos: number;
     height: number;
-    kind: 'block' | 'line';
+    /**
+     * `row` offsets pad a table row's cells, because a spacer element between
+     * table rows would be pulled out of the table by the HTML parser.
+     */
+    kind: 'block' | 'line' | 'row';
+    /** Document coordinate this offset is meant to place its content at. */
+    targetTop: number;
+    /** End position of the row node, for row decorations. */
+    endPos?: number;
 }
 
 interface PaginationPluginState {
@@ -94,6 +105,35 @@ declare module '@tiptap/core' {
 
 function createSpecKey(spec: PaginationSpacerSpec) {
     return `${spec.kind}-${spec.pos}`;
+}
+
+/**
+ * Renders one planned offset as a decoration.
+ *
+ * @param spec - The offset to render.
+ * @returns A row decoration for table rows, or a spacer widget otherwise.
+ */
+function createSpecDecoration(spec: PaginationSpacerSpec) {
+    const key = createSpecKey(spec);
+
+    if (spec.kind === 'row' && spec.endPos !== undefined) {
+        return Decoration.node(spec.pos, spec.endPos, {
+            class: PAGE_ROW_OFFSET_CLASS,
+            style: `${PAGE_ROW_OFFSET_VAR}: ${spec.height}px`,
+            [PAGE_ROW_KEY_ATTRIBUTE]: key,
+        });
+    }
+
+    return Decoration.widget(
+        spec.pos,
+        (view) => createTiptapPageSpacerElement(view.dom.ownerDocument, spec.height, key),
+        {
+            key,
+            side: -1,
+            ignoreSelection: true,
+            marks: [],
+        },
+    );
 }
 
 function createSignature(specs: PaginationSpacerSpec[]) {
@@ -209,8 +249,23 @@ function measureSpacers(
 
             if (plan.offset > 0) {
                 const pos = getBlockPosition(view, block.element);
-                if (pos !== null) {
-                    specs.push({ pos, height: plan.offset, kind: 'block' });
+                const node = pos === null ? null : view.state.doc.nodeAt(pos);
+
+                if (pos !== null && block.offsetMode === 'row-padding' && node) {
+                    specs.push({
+                        pos,
+                        endPos: pos + node.nodeSize,
+                        height: plan.offset,
+                        kind: 'row',
+                        targetTop: plan.targetTop,
+                    });
+                } else if (pos !== null) {
+                    specs.push({
+                        pos,
+                        height: plan.offset,
+                        kind: 'block',
+                        targetTop: plan.targetTop,
+                    });
                 }
             }
 
@@ -222,7 +277,12 @@ function measureSpacers(
 
                 const pos = getLinePosition(view, root, block.element, line.top);
                 if (pos !== null) {
-                    specs.push({ pos, height: spacer.height, kind: 'line' });
+                    specs.push({
+                        pos,
+                        height: spacer.height,
+                        kind: 'line',
+                        targetTop: spacer.targetTop,
+                    });
                 }
             });
         });
@@ -273,10 +333,9 @@ function runPaginationPass(view: EditorView, geometry: TiptapPageGeometryInput) 
  * rewrites those heights, which is what stops visible gaps at a page seam.
  *
  * @param view - Active editor view.
- * @param geometry - Page geometry input for the current document layout.
  * @returns True when a correction was committed.
  */
-function runCorrectionPass(view: EditorView, geometry: TiptapPageGeometryInput) {
+function runCorrectionPass(view: EditorView) {
     if (!view.dom.isConnected) {
         return false;
     }
@@ -286,9 +345,13 @@ function runCorrectionPass(view: EditorView, geometry: TiptapPageGeometryInput) 
         return false;
     }
 
-    const corrections = measureTiptapPageSpacerCorrections(
+    const corrections = measureTiptapPageOffsetCorrections(
         view.dom as HTMLElement,
-        createTiptapLivePageGeometry(geometry),
+        state.specs.map((spec) => ({
+            key: createSpecKey(spec),
+            targetTop: spec.targetTop,
+            height: spec.height,
+        })),
     );
 
     if (corrections.length === 0) {
@@ -296,9 +359,7 @@ function runCorrectionPass(view: EditorView, geometry: TiptapPageGeometryInput) 
     }
 
     const correctedHeights = new Map(
-        corrections.flatMap((correction) => (
-            correction.key ? [[correction.key, correction.correctedHeight] as const] : []
-        )),
+        corrections.map((correction) => [correction.key, correction.correctedHeight] as const),
     );
 
     const corrected = state.specs.map((spec) => {
@@ -384,20 +445,7 @@ export const PaginationExtension = Extension.create({
                             return {
                                 decorations: DecorationSet.create(
                                     newState.doc,
-                                    meta.specs.map((spec) => Decoration.widget(
-                                        spec.pos,
-                                        (view) => createTiptapPageSpacerElement(
-                                            view.dom.ownerDocument,
-                                            spec.height,
-                                            createSpecKey(spec),
-                                        ),
-                                        {
-                                            key: createSpecKey(spec),
-                                            side: -1,
-                                            ignoreSelection: true,
-                                            marks: [],
-                                        },
-                                    )),
+                                    meta.specs.map(createSpecDecoration),
                                 ),
                                 signature: meta.signature,
                                 specs: meta.specs,
@@ -448,7 +496,7 @@ export const PaginationExtension = Extension.create({
                         correctionFrame = window.requestAnimationFrame(() => {
                             correctionFrame = null;
 
-                            if (runCorrectionPass(view, storage.geometry)) {
+                            if (runCorrectionPass(view)) {
                                 scheduleCorrection(pass + 1);
                             }
                         });
