@@ -445,6 +445,16 @@ export function useEditorActions({
             return;
         }
 
+        if (actionId === INSERT_ACTION_IDS.pageBreakAtCursor) {
+            if (isReadOnly) {
+                toast.warning('This document is read-only.');
+                return;
+            }
+
+            editor.commands.insertPageBreakAtCursor();
+            return;
+        }
+
         if (actionId === INSERT_ACTION_IDS.pageBreakBefore) {
             if (isReadOnly) {
                 toast.warning('This document is read-only.');
