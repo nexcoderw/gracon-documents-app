@@ -1017,7 +1017,25 @@ body {
     max-width: 100%;
     min-width: 0;
     overflow-wrap: break-word;
-    padding-top: var(--document-page-auto-offset, 0px);
+}
+/*
+ * Pagination spacers push content past page chrome. They are decoration-only in
+ * the live editor and inert elements in export clones, so they must never take
+ * a caret, a selection, or a pointer event.
+ */
+.document-page-spacer {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.document-pagination-measuring .document-page-spacer {
+    display: none;
 }
 .document-layout-frame--show-marks
     .tiptap-editor
@@ -1030,7 +1048,7 @@ body {
     .tiptap-editor
     .ProseMirror
     [data-document-page-overflow='true']::before {
-    content: 'Block spans page';
+    content: 'Taller than one page';
     display: block;
     margin: 0 0 8px;
     color: rgba(180, 83, 9, 0.82);
@@ -1059,10 +1077,6 @@ body {
     outline-offset: 2px;
 }
 .tiptap-editor .ProseMirror [data-page-break-before='true'] {
-    padding-top: calc(
-        var(--document-page-break-before-offset, 0px) +
-            var(--document-page-auto-offset, 0px)
-    );
     break-before: page;
     page-break-before: always;
 }
