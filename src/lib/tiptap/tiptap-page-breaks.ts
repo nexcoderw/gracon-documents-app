@@ -11,16 +11,18 @@ import {
     createTiptapPageSpacerElement,
     findTiptapLineStartPoint,
     measureTiptapPageBlocks,
-    measureTiptapPageSpacerCorrections,
+    measureTiptapPageOffsetCorrections,
+    applyTiptapPageRowOffset,
+    clearTiptapPageRowOffsets,
     PAGE_MEASURING_CLASS,
     PAGE_SPACER_ATTRIBUTE,
+    type TiptapAppliedPageOffset,
     type TiptapLineStartPoint,
     type TiptapMeasuredPageBlock,
 } from '@/lib/tiptap/tiptap-page-layout-dom';
 import { planTiptapPageLayout } from '@/lib/tiptap/tiptap-page-layout-plan';
 import {
     createTiptapPageGeometry,
-    type TiptapPageGeometry,
     type TiptapPageGeometryInput,
 } from '@/lib/tiptap/tiptap-page-geometry';
 import type { TiptapPageBlockLayoutPlan } from '@/lib/tiptap/tiptap-page-layout-plan';
@@ -34,7 +36,7 @@ const MAX_CORRECTION_PASSES = 3;
 interface PlannedSpacerInsertion {
     block: TiptapMeasuredPageBlock;
     plan: TiptapPageBlockLayoutPlan;
-    linePoints: Array<{ point: TiptapLineStartPoint; height: number }>;
+    linePoints: Array<{ point: TiptapLineStartPoint; height: number; targetTop: number }>;
 }
 const LEGACY_OFFSET_VARS = [
     '--document-page-break-before-offset',
@@ -55,6 +57,7 @@ export interface TiptapPageLayoutOffsetResult {
  */
 export function clearTiptapPageLayoutOffsets(root: HTMLElement) {
     root.querySelectorAll(`[${PAGE_SPACER_ATTRIBUTE}]`).forEach((spacer) => spacer.remove());
+    clearTiptapPageRowOffsets(root);
     root.querySelectorAll<HTMLElement>(`[${PAGE_OVERFLOW_ATTR}]`).forEach((element) => {
         element.removeAttribute(PAGE_OVERFLOW_ATTR);
     });
@@ -63,8 +66,8 @@ export function clearTiptapPageLayoutOffsets(root: HTMLElement) {
     });
 }
 
-function insertSpacerBeforeBlock(element: HTMLElement, height: number) {
-    const spacer = createTiptapPageSpacerElement(element.ownerDocument, height);
+function insertSpacerBeforeBlock(element: HTMLElement, height: number, key: string) {
+    const spacer = createTiptapPageSpacerElement(element.ownerDocument, height, key);
     element.parentElement?.insertBefore(spacer, element);
 }
 
@@ -72,13 +75,14 @@ function insertSpacerAtPoint(
     ownerDocument: Document,
     point: TiptapLineStartPoint,
     height: number,
+    key: string,
 ) {
     const range = ownerDocument.createRange();
 
     try {
         range.setStart(point.node, point.offset);
         range.collapse(true);
-        range.insertNode(createTiptapPageSpacerElement(ownerDocument, height));
+        range.insertNode(createTiptapPageSpacerElement(ownerDocument, height, key));
     } finally {
         range.detach();
     }
@@ -122,35 +126,61 @@ export function applyTiptapPageLayoutOffsets(
                 ? findTiptapLineStartPoint(root, block.element, line.top)
                 : null;
 
-            return point ? [{ point, height: spacer.height }] : [];
+            return point
+                ? [{ point, height: spacer.height, targetTop: spacer.targetTop }]
+                : [];
         });
 
         return { block, plan, linePoints };
     });
     root.classList.remove(PAGE_MEASURING_CLASS);
 
-    applyPlannedSpacers(insertions, result);
-    correctRenderedSpacers(root, geometry);
+    const applied = applyPlannedSpacers(insertions, result);
+    correctRenderedOffsets(root, applied);
 
     return result;
 }
 
 /**
- * Re-measures applied spacers and rewrites the heights that missed the grid.
+ * Re-measures applied offsets and rewrites the ones that missed their target.
  *
- * @param root - Rendered surface that has already received its spacers.
- * @param geometry - Normalized page geometry for the surface.
+ * @param root - Rendered surface that has already received its offsets.
+ * @param applied - Offsets that were applied, with their planned targets.
  */
-function correctRenderedSpacers(root: HTMLElement, geometry: TiptapPageGeometry) {
+function correctRenderedOffsets(root: HTMLElement, applied: TiptapAppliedPageOffset[]) {
+    let current = applied;
+
     for (let pass = 0; pass < MAX_CORRECTION_PASSES; pass += 1) {
-        const corrections = measureTiptapPageSpacerCorrections(root, geometry);
+        const corrections = measureTiptapPageOffsetCorrections(root, current);
 
         if (corrections.length === 0) {
             return;
         }
 
-        corrections.forEach((correction) => {
-            correction.element.style.height = `${correction.correctedHeight}px`;
+        const correctedHeights = new Map(
+            corrections.map((correction) => [correction.key, correction.correctedHeight]),
+        );
+
+        current = current.map((offset) => {
+            const height = correctedHeights.get(offset.key);
+            if (height === undefined) {
+                return offset;
+            }
+
+            const element = root.querySelector<HTMLElement>(
+                `[${PAGE_SPACER_ATTRIBUTE}][data-document-page-spacer-key="${offset.key}"]`,
+            );
+
+            if (element) {
+                element.style.height = `${height}px`;
+            } else {
+                const row = root.querySelector<HTMLElement>(
+                    `[data-document-page-row-key="${offset.key}"]`,
+                );
+                row?.style.setProperty('--document-page-row-offset', `${height}px`);
+            }
+
+            return { ...offset, height };
         });
     }
 }
@@ -158,15 +188,25 @@ function correctRenderedSpacers(root: HTMLElement, geometry: TiptapPageGeometry)
 function applyPlannedSpacers(
     insertions: PlannedSpacerInsertion[],
     result: TiptapPageLayoutOffsetResult,
-) {
-    insertions.forEach(({ block, plan, linePoints }) => {
+): TiptapAppliedPageOffset[] {
+    const applied: TiptapAppliedPageOffset[] = [];
+
+    insertions.forEach(({ block, plan, linePoints }, index) => {
         if (plan.overflow) {
             block.element.setAttribute(PAGE_OVERFLOW_ATTR, 'true');
             result.overflowBlockCount += 1;
         }
 
         if (plan.offset > 0) {
-            insertSpacerBeforeBlock(block.element, plan.offset);
+            const key = `block-${index}`;
+
+            if (block.offsetMode === 'row-padding') {
+                applyTiptapPageRowOffset(block.element, plan.offset, key);
+            } else {
+                insertSpacerBeforeBlock(block.element, plan.offset, key);
+            }
+
+            applied.push({ key, targetTop: plan.targetTop, height: plan.offset });
 
             if (plan.mode === 'manual-break') {
                 result.manualOffsetCount += 1;
@@ -176,12 +216,26 @@ function applyPlannedSpacers(
         }
 
         // Later lines are inserted first: splitting a text node at a later
-        // offset keeps the earlier resolved points in that node valid.
-        [...linePoints].reverse().forEach((spacer) => {
-            insertSpacerAtPoint(block.element.ownerDocument, spacer.point, spacer.height);
+        // offset keeps the earlier resolved points in that node valid. The
+        // applied list stays in document order, which corrections depend on.
+        [...linePoints].reverse().forEach((spacer, reverseIndex) => {
+            insertSpacerAtPoint(
+                block.element.ownerDocument,
+                spacer.point,
+                spacer.height,
+                `line-${index}-${linePoints.length - 1 - reverseIndex}`,
+            );
             result.lineSplitCount += 1;
+        });
+
+        linePoints.forEach((spacer, lineIndex) => {
+            applied.push({
+                key: `line-${index}-${lineIndex}`,
+                targetTop: spacer.targetTop,
+                height: spacer.height,
+            });
         });
     });
 
-    return result;
+    return applied;
 }
