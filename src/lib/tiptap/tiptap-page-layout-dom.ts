@@ -5,10 +5,10 @@
  * both surfaces paginate from the same numbers. Nothing here mutates TipTap
  * JSON: it only reads DOM rectangles and reports where pages must break.
  */
-import { getTiptapPageRegionAt, type TiptapPageGeometry } from './tiptap-page-geometry';
-import type {
-    TiptapPageBlockLayoutInput,
-    TiptapPageLineMeasurement,
+import {
+    planTiptapPageOffsetCorrections,
+    type TiptapPageBlockLayoutInput,
+    type TiptapPageLineMeasurement,
 } from './tiptap-page-layout-plan';
 
 /** Blocks whose text may continue on the next page at a line boundary. */
@@ -16,6 +16,18 @@ const SPLITTABLE_BLOCK_SELECTOR = 'p, h1, h2, h3, h4, h5, h6, blockquote';
 
 /** Top-level blocks that are expanded into their list items. */
 const LIST_BLOCK_SELECTOR = 'ul, ol';
+
+/** Top-level blocks that are expanded into their rows. */
+const TABLE_BLOCK_SELECTOR = 'table';
+
+/** Class that offsets a table row into the next printable region. */
+export const PAGE_ROW_OFFSET_CLASS = 'document-page-row-offset';
+
+/** Custom property carrying a row's offset to its cells. */
+export const PAGE_ROW_OFFSET_VAR = '--document-page-row-offset';
+
+/** Identifies which planned offset a rendered row came from. */
+export const PAGE_ROW_KEY_ATTRIBUTE = 'data-document-page-row-key';
 
 /** The frame the stacked page surfaces are positioned inside. */
 const PAGE_FRAME_SELECTOR = '[data-document-export-root="true"]';
@@ -29,8 +41,8 @@ export const PAGE_SPACER_CLASS = 'document-page-spacer';
 /** Identifies which planned spacer a rendered element came from. */
 export const PAGE_SPACER_KEY_ATTRIBUTE = 'data-document-page-spacer-key';
 
-/** Pixel difference below which a rendered spacer counts as correct. */
-const SPACER_CORRECTION_TOLERANCE_PX = 1;
+/** Pixel difference below which a rendered offset counts as correct. */
+const OFFSET_CORRECTION_TOLERANCE_PX = 1;
 
 /** Class that hides spacers while a measurement pass runs. */
 export const PAGE_MEASURING_CLASS = 'document-pagination-measuring';
@@ -38,10 +50,19 @@ export const PAGE_MEASURING_CLASS = 'document-pagination-measuring';
 /** Same-line tolerance in CSS pixels for grouping client rects into lines. */
 const LINE_GROUP_TOLERANCE_PX = 2;
 
+/** How a block's offset has to be applied to the rendered DOM. */
+export type TiptapPageOffsetMode = 'spacer' | 'row-padding';
+
 /** A measured block paired with the element it was measured from. */
 export interface TiptapMeasuredPageBlock extends TiptapPageBlockLayoutInput {
     element: HTMLElement;
     lines: TiptapPageLineMeasurement[];
+    /**
+     * Table rows cannot host a spacer element — a stray node between rows is
+     * pulled out of the table by the HTML parser — so they are offset by padding
+     * their cells instead.
+     */
+    offsetMode: TiptapPageOffsetMode;
 }
 
 /** A DOM point at the first character of a rendered line. */
@@ -177,6 +198,13 @@ function collectLayoutElements(root: HTMLElement): HTMLElement[] {
             return items.length > 0 ? items : [child];
         }
 
+        // Tables paginate per row so a long table continues on the next page.
+        if (child.matches(TABLE_BLOCK_SELECTOR)) {
+            const rows = Array.from(child.querySelectorAll<HTMLElement>('tr'));
+
+            return rows.length > 0 ? rows : [child];
+        }
+
         return [child];
     });
 }
@@ -196,6 +224,7 @@ export function measureTiptapPageBlocks(root: HTMLElement): TiptapMeasuredPageBl
     return collectLayoutElements(root).map((element) => {
         const rect = element.getBoundingClientRect();
         const splittable = isSplittableElement(element);
+        const isRow = element.tagName === 'TR';
 
         return {
             element,
@@ -204,6 +233,7 @@ export function measureTiptapPageBlocks(root: HTMLElement): TiptapMeasuredPageBl
             forceNextPage: element.getAttribute('data-page-break-before') === 'true',
             splittable,
             lines: splittable ? measureBlockLines(context, element) : [],
+            offsetMode: isRow ? 'row-padding' : 'spacer',
         };
     });
 }
@@ -308,70 +338,121 @@ export function createTiptapPageSpacerElement(
     return spacer;
 }
 
-/** A spacer whose rendered result does not match the page grid. */
-export interface TiptapPageSpacerCorrection {
-    /** Identifies the spacer that produced this correction. */
-    key: string | null;
-    /** The spacer element, for callers that adjust the DOM directly. */
-    element: HTMLElement;
-    /** Height the spacer currently renders at. */
+/** An applied offset whose rendered result missed its planned target. */
+export interface TiptapPageOffsetCorrection {
+    /** Identifies the applied offset this correction belongs to. */
+    key: string;
+    /** Height the offset currently renders at. */
     currentHeight: number;
-    /** Height that lands the following content on the page grid. */
+    /** Height that lands the content on its planned target. */
     correctedHeight: number;
 }
 
-/**
- * Measures where applied spacers actually put their content, and corrects them.
- *
- * Model error is unavoidable: fractional line heights, web fonts, and anonymous
- * block boxes all shift content by a pixel or two, and any mismatch between the
- * measured origin and the page grid shows up as a visible gap. Content resumes
- * exactly at the spacer's bottom edge, so comparing that edge with the printable
- * top of the page it landed on turns any residual error into a correction.
- *
- * @param root - Rendered `.ProseMirror` element or export clone, already paginated.
- * @param geometry - Normalized page geometry for the current surface.
- * @param tolerance - Ignore differences at or below this many pixels.
- * @returns One entry per spacer that needs a different height.
- */
-export function measureTiptapPageSpacerCorrections(
-    root: HTMLElement,
-    geometry: TiptapPageGeometry,
-    tolerance = SPACER_CORRECTION_TOLERANCE_PX,
-): TiptapPageSpacerCorrection[] {
-    const context = createRootMeasureContext(root);
-    const spacers = Array.from(
-        root.querySelectorAll<HTMLElement>(`[${PAGE_SPACER_ATTRIBUTE}]`),
+/** One applied offset, described well enough to verify it. */
+export interface TiptapAppliedPageOffset {
+    key: string;
+    /** Document coordinate the offset was supposed to place content at. */
+    targetTop: number;
+    /** Offset height currently applied. */
+    height: number;
+}
+
+function getOffsetElement(root: HTMLElement, key: string): HTMLElement | null {
+    return root.querySelector<HTMLElement>(
+        `[${PAGE_SPACER_KEY_ATTRIBUTE}="${key}"], [${PAGE_ROW_KEY_ATTRIBUTE}="${key}"]`,
     );
+}
 
-    return spacers.flatMap((element) => {
-        const rect = element.getBoundingClientRect();
-        const currentHeight = toDocumentLength(context, rect.height);
+/**
+ * Reads where an applied offset actually put the content that follows it.
+ *
+ * @param context - Measurement context for the rendered root.
+ * @param element - The spacer element, or the row whose cells were padded.
+ * @param height - Offset height currently applied.
+ * @returns The rendered content top in document coordinates.
+ */
+function getOffsetContentTop(
+    context: RootMeasureContext,
+    element: HTMLElement,
+    height: number,
+) {
+    if (element.tagName !== 'TR') {
+        // A spacer sits directly above the content it positions.
+        return toDocumentTop(context, element.getBoundingClientRect().bottom);
+    }
 
-        if (currentHeight <= 0) {
-            return [];
-        }
+    // A padded row contains its content, so measure the content itself: the row
+    // box still starts at the seam, only what is inside it moves down.
+    const cellContent = element.querySelector<HTMLElement>('td > *, th > *');
 
-        // Content after a spacer starts exactly at the spacer's bottom edge.
-        const contentTop = toDocumentTop(context, rect.bottom);
-        const region = getTiptapPageRegionAt(geometry, contentTop);
-        const delta = contentTop - region.printableTop;
+    return cellContent
+        ? toDocumentTop(context, cellContent.getBoundingClientRect().top)
+        : toDocumentTop(context, element.getBoundingClientRect().top) + height;
+}
 
-        if (Math.abs(delta) <= tolerance) {
-            return [];
-        }
+/**
+ * Verifies applied offsets against the targets the planner chose for them.
+ *
+ * A plan is built from measurements, so fractional line heights, web fonts, and
+ * anonymous block boxes all leave a small error per offset. Those errors add up
+ * down the document — a few pixels per page seam becomes a visible hole tens of
+ * pages later — so corrections are computed cumulatively in document order, each
+ * one accounting for how far the corrections above it have already moved this
+ * content. Targets are absolute page coordinates, so content that landed in a
+ * page gap is pushed forward to where it belongs rather than dragged back onto
+ * the page above it.
+ *
+ * @param root - Rendered surface that has already received its offsets.
+ * @param applied - The offsets that were applied, in document order.
+ * @param tolerance - Ignore differences at or below this many pixels.
+ * @returns One entry per offset that needs a different height.
+ */
+export function measureTiptapPageOffsetCorrections(
+    root: HTMLElement,
+    applied: TiptapAppliedPageOffset[],
+    tolerance = OFFSET_CORRECTION_TOLERANCE_PX,
+): TiptapPageOffsetCorrection[] {
+    const context = createRootMeasureContext(root);
+    const measurements = applied.flatMap((offset) => {
+        const element = getOffsetElement(root, offset.key);
 
-        const correctedHeight = Math.max(0, Math.round(currentHeight - delta));
-
-        if (correctedHeight === Math.round(currentHeight)) {
+        if (!element) {
             return [];
         }
 
         return [{
-            key: element.getAttribute(PAGE_SPACER_KEY_ATTRIBUTE),
-            element,
-            currentHeight: Math.round(currentHeight),
-            correctedHeight,
+            key: offset.key,
+            height: offset.height,
+            targetTop: offset.targetTop,
+            measuredTop: getOffsetContentTop(context, element, offset.height),
         }];
+    });
+
+    return planTiptapPageOffsetCorrections(measurements, tolerance);
+}
+
+/**
+ * Applies a row offset by padding the row's cells.
+ *
+ * @param row - Rendered table row.
+ * @param height - Offset height in CSS pixels.
+ * @param key - Identifier used when the offset is verified.
+ */
+export function applyTiptapPageRowOffset(row: HTMLElement, height: number, key: string) {
+    row.classList.add(PAGE_ROW_OFFSET_CLASS);
+    row.style.setProperty(PAGE_ROW_OFFSET_VAR, `${Math.max(0, Math.round(height))}px`);
+    row.setAttribute(PAGE_ROW_KEY_ATTRIBUTE, key);
+}
+
+/**
+ * Removes every row offset from a rendered surface.
+ *
+ * @param root - Rendered `.ProseMirror` element or export clone.
+ */
+export function clearTiptapPageRowOffsets(root: HTMLElement) {
+    root.querySelectorAll<HTMLElement>(`.${PAGE_ROW_OFFSET_CLASS}`).forEach((row) => {
+        row.classList.remove(PAGE_ROW_OFFSET_CLASS);
+        row.style.removeProperty(PAGE_ROW_OFFSET_VAR);
+        row.removeAttribute(PAGE_ROW_KEY_ATTRIBUTE);
     });
 }
