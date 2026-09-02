@@ -30,6 +30,13 @@ export const PAPER_CONTENT_INNER_WIDTH_PX =
 
 export const PAPER_PAGE_GAP_PX = 24;
 
+/**
+ * Breathing room kept between page content and the repeated header/footer rules.
+ * Content that breaks across pages stops this far above the footer and resumes
+ * this far below the header, so a page seam never looks flush or clipped.
+ */
+export const PAPER_CONTENT_SAFETY_PX = 18;
+
 export const A4_PAPER_WIDTH_TWIP = 11906;
 export const A4_PAPER_HEIGHT_TWIP = 16838;
 
