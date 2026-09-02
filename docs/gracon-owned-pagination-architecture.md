@@ -61,6 +61,21 @@ where a line begins. Measurement always runs with spacers hidden through the
 `document-pagination-measuring` class, so plans are computed from unpaginated
 coordinates and every pass converges instead of compounding.
 
+Two measurement rules are easy to get wrong and both produce visible gaps:
+
+- Coordinates are measured against the frame that the page surfaces are
+  positioned inside (`[data-document-export-root="true"]`), never against
+  `.ProseMirror`. Any chrome between the two would otherwise shift every seam.
+- Client rects are in zoom-scaled pixels while geometry is in CSS pixels, so
+  every measurement is divided by the measured scale.
+
+Because measurement is planned, applied, and then verified, a plan is never
+trusted on its own: `measureTiptapPageSpacerCorrections` re-reads where each
+applied spacer actually put its content and rewrites heights that missed the
+printable top. Corrections are bounded (three passes) and idempotent. The live
+extension also fingerprints the unpaginated measurement, so the resize observer
+firing on its own height change cannot replan back over a correction.
+
 Only the renderers differ:
 
 - The live editor uses `src/store/editor/pagination-extension.ts`. Spacers are
@@ -87,6 +102,16 @@ inside footer chrome. Later lines receive spacers instead of moving the block,
 which is what lets a paragraph span pages. A block is only flagged as overflow
 when it genuinely cannot be paginated: a single line, image, or table taller
 than one printable region.
+
+The printable region keeps `PAPER_CONTENT_SAFETY_PX` of breathing room above the
+footer and below the header, so a seam never leaves a line flush against page
+chrome. The paged editor padding in `globals.css` adds the same value through
+`--paper-content-safety`; the two must stay in sync or page one will start at a
+different height than every page after it.
+
+`pageBreakBefore` on a block that already opens a printable region applies no
+push. Pushing it again would leave a page-sized hole above content that was
+already in the right place.
 
 The live editor may include a gray page gap in the page pitch so users can see
 page boundaries clearly. Export and print capture must collapse that gap to
