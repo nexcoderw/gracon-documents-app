@@ -11,17 +11,31 @@ import {
     createTiptapPageSpacerElement,
     findTiptapLineStartPoint,
     measureTiptapPageBlocks,
+    measureTiptapPageSpacerCorrections,
     PAGE_MEASURING_CLASS,
     PAGE_SPACER_ATTRIBUTE,
     type TiptapLineStartPoint,
+    type TiptapMeasuredPageBlock,
 } from '@/lib/tiptap/tiptap-page-layout-dom';
 import { planTiptapPageLayout } from '@/lib/tiptap/tiptap-page-layout-plan';
 import {
     createTiptapPageGeometry,
+    type TiptapPageGeometry,
     type TiptapPageGeometryInput,
 } from '@/lib/tiptap/tiptap-page-geometry';
+import type { TiptapPageBlockLayoutPlan } from '@/lib/tiptap/tiptap-page-layout-plan';
 
 const PAGE_OVERFLOW_ATTR = 'data-document-page-overflow';
+
+/** Correction attempts allowed before a surface is accepted as-is. */
+const MAX_CORRECTION_PASSES = 3;
+
+/** One block's planned spacers, resolved to DOM insertion points. */
+interface PlannedSpacerInsertion {
+    block: TiptapMeasuredPageBlock;
+    plan: TiptapPageBlockLayoutPlan;
+    linePoints: Array<{ point: TiptapLineStartPoint; height: number }>;
+}
 const LEGACY_OFFSET_VARS = [
     '--document-page-break-before-offset',
     '--document-page-auto-offset',
@@ -115,6 +129,36 @@ export function applyTiptapPageLayoutOffsets(
     });
     root.classList.remove(PAGE_MEASURING_CLASS);
 
+    applyPlannedSpacers(insertions, result);
+    correctRenderedSpacers(root, geometry);
+
+    return result;
+}
+
+/**
+ * Re-measures applied spacers and rewrites the heights that missed the grid.
+ *
+ * @param root - Rendered surface that has already received its spacers.
+ * @param geometry - Normalized page geometry for the surface.
+ */
+function correctRenderedSpacers(root: HTMLElement, geometry: TiptapPageGeometry) {
+    for (let pass = 0; pass < MAX_CORRECTION_PASSES; pass += 1) {
+        const corrections = measureTiptapPageSpacerCorrections(root, geometry);
+
+        if (corrections.length === 0) {
+            return;
+        }
+
+        corrections.forEach((correction) => {
+            correction.element.style.height = `${correction.correctedHeight}px`;
+        });
+    }
+}
+
+function applyPlannedSpacers(
+    insertions: PlannedSpacerInsertion[],
+    result: TiptapPageLayoutOffsetResult,
+) {
     insertions.forEach(({ block, plan, linePoints }) => {
         if (plan.overflow) {
             block.element.setAttribute(PAGE_OVERFLOW_ATTR, 'true');
