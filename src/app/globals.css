@@ -85,6 +85,8 @@
         var(--paper-height) - var(--paper-header-height) -
             var(--paper-footer-height)
     );
+    /* Keep in sync with PAPER_CONTENT_SAFETY_PX in constants/document-paper.ts. */
+    --paper-content-safety: 18px;
     --paper-content-padding-top: 56px;
     --paper-content-padding-right: 76px;
     --paper-content-padding-bottom: 64px;
@@ -234,9 +236,19 @@ body {
 .document-layout-frame--paged .tiptap-editor.tiptap-editor-paper .ProseMirror {
     min-height: var(--ded-tiptap-min-height, inherit);
     max-width: none;
-    padding: calc(var(--paper-header-height) + var(--paper-content-padding-top))
+    /*
+     * The safety padding matches the pagination engine's printable region, so
+     * the first page starts exactly where every later page resumes.
+     */
+    padding: calc(
+            var(--paper-header-height) + var(--paper-content-padding-top) +
+                var(--paper-content-safety)
+        )
         var(--paper-content-padding-right)
-        calc(var(--paper-footer-height) + var(--paper-content-padding-bottom))
+        calc(
+            var(--paper-footer-height) + var(--paper-content-padding-bottom) +
+                var(--paper-content-safety)
+        )
         var(--paper-content-padding-left);
     background: transparent;
 }
