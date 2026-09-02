@@ -29,6 +29,8 @@ import {
     toggleOrderedListStyle,
 } from '@/store/editor/list-style-extension';
 import { ParagraphLayoutExtension } from '@/store/editor/paragraph-layout-extension';
+import { PaginationExtension } from '@/store/editor/pagination-extension';
+import type { TiptapPageGeometryInput } from '@/lib/tiptap/tiptap-page-geometry';
 import { SignatureBlockExtension } from '@/store/editor/signature-block-extension';
 import { ImportedDocxStyleExtension } from '@/store/editor/imported-docx-style-extension';
 import { ResizableImageExtension } from '@/store/editor/resizable-image-extension';
@@ -96,6 +98,8 @@ interface RichTextEditorProps {
     pageNumber?: number;
     pageCount?: number;
     paperStyle?: CSSProperties;
+    /** Page geometry used to paginate the paper surface. */
+    pageGeometry?: TiptapPageGeometryInput;
     /**
      * Rendered as an absolutely-positioned overlay that fills the paper sheet.
      * Used for the draggable signature block so it can be placed anywhere on
@@ -118,6 +122,7 @@ export function RichTextEditor({
     pageNumber = 1,
     pageCount = 1,
     paperStyle,
+    pageGeometry,
     overlayContent,
     commentAnchors = [],
 }: RichTextEditorProps) {
@@ -190,6 +195,8 @@ export function RichTextEditor({
             ImportedDocxStyleExtension,
             FootnoteReferenceExtension,
             SignatureBlockExtension,
+            // Only the paper surface stacks page backgrounds to paginate against.
+            ...(paperMode ? [PaginationExtension] : []),
         ],
         content: sanitizedInitialContent,
         editable: !readOnly,
@@ -221,6 +228,13 @@ export function RichTextEditor({
         if (!editor) return;
         editor.commands.setCommentAnchors(commentAnchors);
     }, [editor, commentAnchors]);
+
+    // Margins, paper size, and page pitch all change the printable region, so
+    // the surface has to be paginated again whenever they do.
+    useEffect(() => {
+        if (!editor || !paperMode || !pageGeometry) return;
+        editor.commands.refreshDocumentPagination(pageGeometry);
+    }, [editor, paperMode, pageGeometry]);
 
     if (!editor) return null;
 
