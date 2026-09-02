@@ -1,126 +1,143 @@
 /**
- * Applies visual geometry for schema-backed and automatic page breaks.
+ * Applies page layout to a static rendered document surface.
  *
- * Page-break state is persisted in TipTap node attributes, while automatic
- * page offsets are temporary render data. These helpers only set CSS variables
- * on the rendered DOM so live editing and PDF capture avoid page chrome without
- * mutating document JSON.
+ * The live editor paginates through ProseMirror decorations, because inserting
+ * nodes into a contenteditable surface from outside TipTap would corrupt the
+ * document model. Export clones are inert DOM, so they receive the same spacer
+ * elements directly. Both paths share one planner, so a PDF page break lands
+ * where the editor drew it.
  */
 import {
-    calculateTiptapCumulativePageBlockOffsets,
+    createTiptapPageSpacerElement,
+    findTiptapLineStartPoint,
+    measureTiptapPageBlocks,
+    PAGE_MEASURING_CLASS,
+    PAGE_SPACER_ATTRIBUTE,
+    type TiptapLineStartPoint,
+} from '@/lib/tiptap/tiptap-page-layout-dom';
+import { planTiptapPageLayout } from '@/lib/tiptap/tiptap-page-layout-plan';
+import {
     createTiptapPageGeometry,
     type TiptapPageGeometryInput,
 } from '@/lib/tiptap/tiptap-page-geometry';
 
-const PAGE_BREAK_BEFORE_SELECTOR = '[data-page-break-before="true"]';
-const PAGE_BREAK_OFFSET_VAR = '--document-page-break-before-offset';
-const PAGE_AUTO_OFFSET_VAR = '--document-page-auto-offset';
 const PAGE_OVERFLOW_ATTR = 'data-document-page-overflow';
-const PAGE_LAYOUT_BLOCK_SELECTOR = ':scope > *';
+const LEGACY_OFFSET_VARS = [
+    '--document-page-break-before-offset',
+    '--document-page-auto-offset',
+];
 
 export interface TiptapPageLayoutOffsetResult {
     manualOffsetCount: number;
     automaticOffsetCount: number;
+    lineSplitCount: number;
     overflowBlockCount: number;
 }
 
-function getRelativeTop(root: HTMLElement, element: HTMLElement) {
-    const rootRect = root.getBoundingClientRect();
-    const elementRect = element.getBoundingClientRect();
-
-    return elementRect.top - rootRect.top + root.scrollTop;
-}
-
 /**
- * Clears computed page-break offsets from rendered editor blocks.
- *
- * @param root - Rendered `.ProseMirror` element or export clone.
- */
-export function clearTiptapPageBreakOffsets(root: HTMLElement) {
-    root.querySelectorAll<HTMLElement>(PAGE_BREAK_BEFORE_SELECTOR).forEach((element) => {
-        element.style.removeProperty(PAGE_BREAK_OFFSET_VAR);
-    });
-}
-
-/**
- * Clears all computed pagination offsets from rendered editor blocks.
+ * Removes every pagination artifact from a rendered surface.
  *
  * @param root - Rendered `.ProseMirror` element or export clone.
  */
 export function clearTiptapPageLayoutOffsets(root: HTMLElement) {
-    root.querySelectorAll<HTMLElement>(PAGE_LAYOUT_BLOCK_SELECTOR).forEach((element) => {
-        element.style.removeProperty(PAGE_BREAK_OFFSET_VAR);
-        element.style.removeProperty(PAGE_AUTO_OFFSET_VAR);
+    root.querySelectorAll(`[${PAGE_SPACER_ATTRIBUTE}]`).forEach((spacer) => spacer.remove());
+    root.querySelectorAll<HTMLElement>(`[${PAGE_OVERFLOW_ATTR}]`).forEach((element) => {
         element.removeAttribute(PAGE_OVERFLOW_ATTR);
+    });
+    root.querySelectorAll<HTMLElement>('[style]').forEach((element) => {
+        LEGACY_OFFSET_VARS.forEach((variable) => element.style.removeProperty(variable));
     });
 }
 
-/**
- * Computes CSS offsets that move break-before blocks to the next printable page.
- *
- * @param root - Rendered `.ProseMirror` element or export clone.
- * @param pageHeight - Page height in CSS pixels.
- * @returns Number of blocks that received a non-zero offset.
- */
-export function applyTiptapPageBreakOffsets(root: HTMLElement, pageHeight: number) {
-    const result = applyTiptapPageLayoutOffsets(root, { pageHeight });
+function insertSpacerBeforeBlock(element: HTMLElement, height: number) {
+    const spacer = createTiptapPageSpacerElement(element.ownerDocument, height);
+    element.parentElement?.insertBefore(spacer, element);
+}
 
-    return result.manualOffsetCount;
+function insertSpacerAtPoint(
+    ownerDocument: Document,
+    point: TiptapLineStartPoint,
+    height: number,
+) {
+    const range = ownerDocument.createRange();
+
+    try {
+        range.setStart(point.node, point.offset);
+        range.collapse(true);
+        range.insertNode(createTiptapPageSpacerElement(ownerDocument, height));
+    } finally {
+        range.detach();
+    }
 }
 
 /**
- * Computes CSS offsets that keep editable blocks inside printable page regions.
+ * Paginates a static rendered surface with block and line spacers.
  *
- * @param root - Rendered `.ProseMirror` element or export clone.
+ * @param root - Rendered `.ProseMirror` clone to paginate.
  * @param input - Page geometry options for the current document layout.
- * @returns Counts for manual and automatic offsets applied during this pass.
+ * @returns Counts describing how the pass resolved the document.
  */
 export function applyTiptapPageLayoutOffsets(
     root: HTMLElement,
     input: TiptapPageGeometryInput = {},
 ): TiptapPageLayoutOffsetResult {
     const geometry = createTiptapPageGeometry(input);
-    const blocks = Array.from(root.querySelectorAll<HTMLElement>(PAGE_LAYOUT_BLOCK_SELECTOR));
-    let manualOffsetCount = 0;
-    let automaticOffsetCount = 0;
-    let overflowBlockCount = 0;
+    const result: TiptapPageLayoutOffsetResult = {
+        manualOffsetCount: 0,
+        automaticOffsetCount: 0,
+        lineSplitCount: 0,
+        overflowBlockCount: 0,
+    };
 
     clearTiptapPageLayoutOffsets(root);
 
-    if (blocks.length === 0 || geometry.pageHeight <= 0 || geometry.printableHeight <= 0) {
-        return { manualOffsetCount, automaticOffsetCount, overflowBlockCount };
+    if (geometry.pageHeight <= 0 || geometry.printableHeight <= 0) {
+        return result;
     }
 
-    const offsets = calculateTiptapCumulativePageBlockOffsets(
-        geometry,
-        blocks.map((block) => ({
-            top: getRelativeTop(root, block),
-            height: block.getBoundingClientRect().height,
-            forceNextPage: block.getAttribute('data-page-break-before') === 'true',
-        })),
-    );
+    // Measure and resolve every insertion point while the surface is still
+    // unpaginated, then apply the spacers without measuring again.
+    root.classList.add(PAGE_MEASURING_CLASS);
+    const blocks = measureTiptapPageBlocks(root);
+    const plans = planTiptapPageLayout(geometry, blocks);
+    const insertions = blocks.map((block, index) => {
+        const plan = plans[index];
+        const linePoints = plan.spacers.flatMap((spacer) => {
+            const line = block.lines[spacer.lineIndex];
+            const point = line
+                ? findTiptapLineStartPoint(root, block.element, line.top)
+                : null;
 
-    blocks.forEach((block, index) => {
-        const manualBreak = block.getAttribute('data-page-break-before') === 'true';
-        const { offset, overflow } = offsets[index] ?? { offset: 0, overflow: false };
+            return point ? [{ point, height: spacer.height }] : [];
+        });
 
-        if (overflow) {
-            block.setAttribute(PAGE_OVERFLOW_ATTR, 'true');
-            overflowBlockCount += 1;
+        return { block, plan, linePoints };
+    });
+    root.classList.remove(PAGE_MEASURING_CLASS);
+
+    insertions.forEach(({ block, plan, linePoints }) => {
+        if (plan.overflow) {
+            block.element.setAttribute(PAGE_OVERFLOW_ATTR, 'true');
+            result.overflowBlockCount += 1;
         }
 
-        if (offset <= 0) {
-            return;
+        if (plan.offset > 0) {
+            insertSpacerBeforeBlock(block.element, plan.offset);
+
+            if (plan.mode === 'manual-break') {
+                result.manualOffsetCount += 1;
+            } else {
+                result.automaticOffsetCount += 1;
+            }
         }
 
-        if (manualBreak) {
-            block.style.setProperty(PAGE_BREAK_OFFSET_VAR, `${offset}px`);
-            manualOffsetCount += 1;
-        } else {
-            block.style.setProperty(PAGE_AUTO_OFFSET_VAR, `${offset}px`);
-            automaticOffsetCount += 1;
-        }
+        // Later lines are inserted first: splitting a text node at a later
+        // offset keeps the earlier resolved points in that node valid.
+        [...linePoints].reverse().forEach((spacer) => {
+            insertSpacerAtPoint(block.element.ownerDocument, spacer.point, spacer.height);
+            result.lineSplitCount += 1;
+        });
     });
 
-    return { manualOffsetCount, automaticOffsetCount, overflowBlockCount };
+    return result;
 }
