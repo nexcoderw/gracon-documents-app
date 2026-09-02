@@ -1,19 +1,29 @@
 # Gracon-Owned Pagination Architecture
 
-This note defines the safe path for pagination, page navigation, document
-outline, and later page-break work in the documents editor.
+This note defines how pagination, page navigation, document outline, and page
+breaks work in the documents editor.
 
-## Current Boundary
+## Where Pagination Happens
 
-The live editor is one TipTap/ProseMirror document surface. Gracon owns the
-paper chrome, page metrics, rulers, print preview, PDF export, and DOCX export
-around that surface. Runtime third-party pagination packages must not be added
-back to the editable editor.
+The editable editor is **one continuous TipTap surface**. It has no page seams,
+no spacers, and no per-page chrome: writing is never interrupted by layout work,
+and no measurement error can accumulate while typing.
 
-Signed, finalised, and locked documents must continue to use the centralized
-read-only rules in `src/lib/document-readonly.ts`. Pagination UI may read the
-document DOM, but it must not re-enable editing or mutate content outside TipTap
-commands.
+Pagination is resolved when the user asks for the document — print preview, and
+the PDF download that goes through it. That surface is static, which is the only
+place page surgery is safe: the paginator moves and splits rendered nodes, which
+would corrupt the document model on a live ProseMirror view.
+
+The preview is the contract. The user sees the paginated document, and the PDF is
+captured from that same rendered surface, so the download cannot disagree with
+the preview. DOCX skips the preview because Word repaginates a flow document
+itself; only `pageBreakBefore` carries over.
+
+Runtime third-party pagination packages must not be added to the editable
+editor. `tiptap-pagination-plus` was evaluated: its table splitting requires
+replacing the Table/TableRow/TableCell/TableHeader nodes with its own, which
+would collide with `table-cell-style-extension.ts` and the DOCX attributes those
+cells carry.
 
 ## Milestone Order
 
@@ -33,8 +43,10 @@ commands.
    normal editor schema content instead of a sidecar widget.
 9. Split text blocks at line boundaries so a long paragraph continues on the
    next page instead of moving or overlapping page chrome.
-10. Keep table row splitting, section breaks, mixed orientation, and
-    per-section margins as a later architecture change.
+10. Split tables at row boundaries with a repeated header row.
+11. Move pagination out of the editable editor and into the download preview.
+12. Keep section breaks, mixed orientation, and per-section margins as a later
+    architecture change.
 
 ## Measurement Rules
 
@@ -47,95 +59,52 @@ Page geometry is normalized by `src/lib/tiptap/tiptap-page-geometry.ts`.
 Live editor callers should use `createTiptapLivePageGeometry`, while PDF/export
 callers should use `createTiptapExportPageGeometry`.
 
-## One Layout Engine, Two Renderers
+## One Forward Pass
 
-`src/lib/tiptap/tiptap-page-layout-plan.ts` is the only page layout engine. It
-is pure: it takes page geometry plus measured blocks — and, for text blocks, the
-rendered line boxes inside them — and returns per-block offsets, line spacers,
-and overflow flags. All pagination behavior belongs there, so it stays unit
-tested and cannot drift between surfaces.
+`src/lib/tiptap/tiptap-page-breaks.ts` paginates a rendered surface in a single
+walk through the document in reading order. Each unit — a block, a line inside a
+block, or a table row — is measured at the moment it is reached, after every
+earlier fix has already been applied. A placement is therefore always decided
+against the true rendered position, which is what stops per-seam error from
+compounding into a page-sized gap further down a long document.
 
-Measurement is shared by `src/lib/tiptap/tiptap-page-layout-dom.ts`, which reads
-block rects, groups client rects into rendered lines, and resolves the DOM point
-where a line begins. Measurement always runs with spacers hidden through the
-`document-pagination-measuring` class, so plans are computed from unpaginated
-coordinates and every pass converges instead of compounding.
+The decision itself is pure and lives in
+`src/lib/tiptap/tiptap-page-layout-plan.ts` (`resolveTiptapPlacement`): keep,
+push, split, or overflow. Measurement lives in
+`src/lib/tiptap/tiptap-page-layout-dom.ts`, which converts client rects into
+document coordinates and finds the DOM point where a rendered line begins.
 
 Two measurement rules are easy to get wrong and both produce visible gaps:
 
-- Coordinates are measured against the frame that the page surfaces are
-  positioned inside (`[data-document-export-root="true"]`), never against
-  `.ProseMirror`. Any chrome between the two would otherwise shift every seam.
-- Client rects are in zoom-scaled pixels while geometry is in CSS pixels, so
-  every measurement is divided by the measured scale.
+- Coordinates are measured against the frame that owns the page surfaces
+  (`[data-document-export-root="true"]`), never `.ProseMirror`. Chrome between
+  the two would shift every seam.
+- Client rects are zoom-scaled while geometry is in CSS pixels, so every reading
+  is divided by the measured scale.
 
-Because measurement is planned, applied, and then verified, a plan is never
-trusted on its own. Every planned offset carries the absolute page coordinate it
-targets, and `measureTiptapPageOffsetCorrections` re-reads where the content
-after it actually rendered. Two rules make this safe:
+## Splitting Rules
 
-- Corrections compare against the stored target, never against a page re-derived
-  from where the content landed. Content that overshot into a page gap must be
-  pushed forward to its target, not dragged back onto the page above it.
-- Corrections are cumulative, planned by `planTiptapPageOffsetCorrections` in
-  document order. Each offset's error moves everything below it, so a few pixels
-  per seam compound into a large hole dozens of pages later; carrying the shift
-  already applied above an offset corrects the whole document in one pass.
+Paragraphs, headings, and blockquotes split at line boundaries: a spacer is
+inserted before the first line that does not fit, so the rest of the paragraph
+continues on the next page.
 
-Corrections are bounded (three passes) and idempotent. The live extension also
-fingerprints the unpaginated measurement, so the resize observer firing on its
-own height change cannot replan back over a correction.
+Tables split at row boundaries. `tiptap-table-pagination.ts` closes the table
+before the row that no longer fits and opens a continuation table on the next
+page, repeating the header row. This is real node surgery, so it must only ever
+run on the static preview/export surface.
 
-Only the renderers differ:
-
-- The live editor uses `src/store/editor/pagination-extension.ts`. Spacers are
-  ProseMirror widget decorations, never nodes, so pagination never reaches
-  autosave, copy/paste, DOCX export, or read-only rules. Its transactions set
-  `addToHistory: false` and do not change the document, so they must never mark
-  a document dirty.
-- Export clones use `src/lib/tiptap/tiptap-page-breaks.ts`, which inserts the
-  same spacer elements directly because a clone is inert DOM. The html2canvas
-  clone keeps the spacers it was given rather than measuring again inside the
-  capture iframe.
-
-Never insert pagination nodes into the live contenteditable surface from outside
-TipTap, and never write measured page state into TipTap JSON.
-
-## Line Splitting Rules
-
-Paragraphs, headings, and blockquotes split at line boundaries. List blocks
-paginate per list item, and tables paginate per row, so a long table continues on
-the next page instead of moving or overlapping page chrome. Images and signature
-blocks still move as one unit because they have no split point.
-
-Table rows are offset differently from every other block: a spacer element
-between rows is pulled out of the table by the HTML parser, so a row that starts
-a new page is pushed by padding its cells (`document-page-row-offset`) instead.
-The row box still begins at the seam, so the pushed row's top border is hidden
-and its cell box crosses the inter-page gap. Splitting the table node itself
-would be a document mutation and is not allowed here.
-
-A block whose first line does not fit moves as a whole, so no line is ever left
-inside footer chrome. Later lines receive spacers instead of moving the block,
-which is what lets a paragraph span pages. A block is only flagged as overflow
-when it genuinely cannot be paginated: a single line, image, or table taller
-than one printable region.
+Images and signature blocks move as one unit. A unit that cannot fit in any
+printable region — taller than a whole page and not splittable — stays in place
+and is marked as render-only overflow.
 
 The printable region keeps `PAPER_CONTENT_SAFETY_PX` of breathing room above the
 footer and below the header, so a seam never leaves a line flush against page
 chrome. The paged editor padding in `globals.css` adds the same value through
-`--paper-content-safety`; the two must stay in sync or page one will start at a
-different height than every page after it.
+`--paper-content-safety`; the two must stay in sync.
 
 `pageBreakBefore` on a block that already opens a printable region applies no
 push. Pushing it again would leave a page-sized hole above content that was
 already in the right place.
-
-The live editor may include a gray page gap in the page pitch so users can see
-page boundaries clearly. Export and print capture must collapse that gap to
-zero so generated PDF pages remain exact A4 slices. Oversized blocks that cannot
-fit within one printable region should be flagged as render-only overflow
-instead of being split or mutated by DOM code.
 
 ## Visual QA Rules
 
@@ -151,19 +120,19 @@ cannot be split stay in document order and show the render-only overflow marker.
 
 The minimum QA pass for page-seam work is:
 
-1. Open a long document in the live editor and inspect the first two page seams.
-2. Confirm headings, paragraphs, lists, and page-break-before blocks start
-   below the header chrome and stop above the footer chrome when they can fit
-   within one printable region.
+1. Open a long document in the editor and confirm it is one continuous sheet
+   with no seams, gaps, or page chrome interrupting the text.
+2. Open print preview and inspect the first two seams: headings, paragraphs,
+   lists, and page-break-before blocks must start below the header chrome and
+   stop above the footer chrome.
 3. Confirm a paragraph longer than the remaining space continues at the top of
-   the next page's printable region, with no line drawn across the seam, and
-   that the overflow marker appears only for content taller than a whole page.
-4. Toggle formatting marks and confirm page-break indicators do not change text
-   flow or overlap the page header/footer.
-5. Open print preview and confirm repeated page chrome matches the live editor
-   without carrying the live gray page gap into exported page slices.
-6. Check at least desktop and narrow laptop widths because ruler/outline
-   presence changes the available canvas scroll area.
+   the next page, with no line drawn across the seam.
+4. Confirm a table longer than a page continues as a second table on the next
+   page with its header row repeated.
+5. Download the PDF from the preview and confirm every page matches what the
+   preview showed.
+6. Check at least desktop and narrow laptop widths, because the preview zoom
+   changes the rendered scale the paginator has to normalize.
 
 ## Page-Break Rules
 
