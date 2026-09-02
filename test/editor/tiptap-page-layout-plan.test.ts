@@ -139,3 +139,38 @@ test('planning never mutates the measurements it was given', () => {
 
     assert.equal(JSON.stringify(blocks), snapshot);
 });
+
+test('a forced break is skipped when the block already starts a page', () => {
+    // 100 is exactly the printable top of page one.
+    const [plan] = planTiptapPageLayout(GEOMETRY, [
+        { ...buildParagraph(100, 3), forceNextPage: true },
+    ]);
+
+    assert.deepEqual(plan, { offset: 0, spacers: [], overflow: false, mode: 'none' });
+});
+
+test('a forced break inside page chrome moves to that page, not the next one', () => {
+    const [plan] = planTiptapPageLayout(GEOMETRY, [
+        { top: 40, height: 40, forceNextPage: true },
+    ]);
+
+    assert.equal(plan.offset, 60);
+});
+
+test('page safety padding keeps content clear of header and footer chrome', () => {
+    const padded = createTiptapPageGeometry({
+        pageHeight: 1000,
+        headerHeight: 40,
+        footerHeight: 50,
+        margins: { top: 60, right: 80, bottom: 70, left: 80 },
+        contentSafetyPadding: 18,
+    });
+
+    assert.equal(padded.printableTop, 118);
+    assert.equal(padded.printableBottom, 862);
+    assert.equal(padded.contentSafetyPadding, 18);
+
+    // A block that fits without padding now breaks earlier because of it.
+    const [plan] = planTiptapPageLayout(padded, [{ top: 800, height: 70 }]);
+    assert.equal(plan.mode, 'automatic-offset');
+});
