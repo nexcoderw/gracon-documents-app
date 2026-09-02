@@ -17,11 +17,14 @@ import {
     createTiptapPageSpacerElement,
     findTiptapLineStartPoint,
     measureTiptapPageBlocks,
+    measureTiptapPageSpacerCorrections,
     PAGE_MEASURING_CLASS,
+    type TiptapMeasuredPageBlock,
 } from '@/lib/tiptap/tiptap-page-layout-dom';
 import { planTiptapPageLayout } from '@/lib/tiptap/tiptap-page-layout-plan';
 import {
     createTiptapLivePageGeometry,
+    type TiptapPageGeometry,
     type TiptapPageGeometryInput,
 } from '@/lib/tiptap/tiptap-page-geometry';
 
@@ -29,6 +32,9 @@ const PAGE_OVERFLOW_ATTR = 'data-document-page-overflow';
 
 /** Debounce for re-paginating after content edits. */
 const CONTENT_SETTLE_MS = 90;
+
+/** Correction attempts allowed before a layout is accepted as-is. */
+const MAX_CORRECTION_PASSES = 3;
 
 export const paginationPluginKey = new PluginKey<PaginationPluginState>('documentPagination');
 
@@ -42,11 +48,27 @@ interface PaginationSpacerSpec {
 interface PaginationPluginState {
     decorations: DecorationSet;
     signature: string;
+    /** The specs the current decorations were built from. */
+    specs: PaginationSpacerSpec[];
+    /**
+     * Fingerprint of the unpaginated measurement these specs came from. Applying
+     * spacers changes the editor's height, which fires the resize observer; this
+     * lets a repeat pass recognize unchanged content and keep the corrected
+     * heights instead of replanning back to the uncorrected ones.
+     */
+    sourceSignature: string;
 }
 
 interface PaginationMeta {
     specs: PaginationSpacerSpec[];
     signature: string;
+    sourceSignature: string;
+}
+
+/** One measurement pass: the spacers to render and what produced them. */
+interface PaginationMeasurement {
+    specs: PaginationSpacerSpec[];
+    sourceSignature: string;
 }
 
 /** Editor-scoped pagination state shared between React and the plugin. */
@@ -70,8 +92,41 @@ declare module '@tiptap/core' {
     }
 }
 
+function createSpecKey(spec: PaginationSpacerSpec) {
+    return `${spec.kind}-${spec.pos}`;
+}
+
 function createSignature(specs: PaginationSpacerSpec[]) {
-    return specs.map((spec) => `${spec.kind}:${spec.pos}:${spec.height}`).join('|');
+    return specs.map((spec) => `${createSpecKey(spec)}:${spec.height}`).join('|');
+}
+
+/**
+ * Fingerprints the unpaginated measurement a plan was built from.
+ *
+ * @param geometry - Page geometry used for the plan.
+ * @param blocks - Blocks measured with spacers hidden.
+ * @returns A string that changes only when content, width, or geometry changes.
+ */
+function createSourceSignature(
+    geometry: TiptapPageGeometry,
+    blocks: TiptapMeasuredPageBlock[],
+) {
+    const pageKey = [
+        geometry.pageHeight,
+        geometry.pagePitch,
+        geometry.printableTop,
+        geometry.printableBottom,
+    ].join('/');
+    const blockKey = blocks
+        .map((block) => [
+            Math.round(block.top),
+            Math.round(block.height),
+            block.lines.length,
+            block.forceNextPage === true ? 1 : 0,
+        ].join('/'))
+        .join('|');
+
+    return `${pageKey}#${blockKey}`;
 }
 
 /**
@@ -130,17 +185,20 @@ function getLinePosition(
 function measureSpacers(
     view: EditorView,
     geometry: TiptapPageGeometryInput,
-): PaginationSpacerSpec[] {
+): PaginationMeasurement {
     const root = view.dom as HTMLElement;
     const pageGeometry = createTiptapLivePageGeometry(geometry);
     const specs: PaginationSpacerSpec[] = [];
     const overflow = new Map<HTMLElement, boolean>();
+    let sourceSignature = '';
 
     root.classList.add(PAGE_MEASURING_CLASS);
 
     try {
         const blocks = measureTiptapPageBlocks(root);
         const plans = planTiptapPageLayout(pageGeometry, blocks);
+
+        sourceSignature = createSourceSignature(pageGeometry, blocks);
 
         blocks.forEach((block, index) => {
             const plan = plans[index];
@@ -181,7 +239,7 @@ function measureSpacers(
         element.removeAttribute(PAGE_OVERFLOW_ATTR);
     });
 
-    return specs;
+    return { specs, sourceSignature };
 }
 
 /**
@@ -192,18 +250,90 @@ function measureSpacers(
  */
 function runPaginationPass(view: EditorView, geometry: TiptapPageGeometryInput) {
     if (!view.dom.isConnected) {
-        return;
+        return false;
     }
 
-    const specs = measureSpacers(view, geometry);
+    const state = paginationPluginKey.getState(view.state);
+    const measurement = measureSpacers(view, geometry);
+
+    // Unchanged content keeps whatever corrections it already received.
+    if (state && measurement.sourceSignature === state.sourceSignature) {
+        return false;
+    }
+
+    return commitSpecs(view, measurement.specs, measurement.sourceSignature);
+}
+
+/**
+ * Corrects spacers whose rendered result missed the page grid.
+ *
+ * The planner works from measurements, so fractional line heights and anonymous
+ * block boxes can leave content a few pixels — occasionally much more — away
+ * from where a page should start. This pass reads the rendered result and
+ * rewrites those heights, which is what stops visible gaps at a page seam.
+ *
+ * @param view - Active editor view.
+ * @param geometry - Page geometry input for the current document layout.
+ * @returns True when a correction was committed.
+ */
+function runCorrectionPass(view: EditorView, geometry: TiptapPageGeometryInput) {
+    if (!view.dom.isConnected) {
+        return false;
+    }
+
+    const state = paginationPluginKey.getState(view.state);
+    if (!state || state.specs.length === 0) {
+        return false;
+    }
+
+    const corrections = measureTiptapPageSpacerCorrections(
+        view.dom as HTMLElement,
+        createTiptapLivePageGeometry(geometry),
+    );
+
+    if (corrections.length === 0) {
+        return false;
+    }
+
+    const correctedHeights = new Map(
+        corrections.flatMap((correction) => (
+            correction.key ? [[correction.key, correction.correctedHeight] as const] : []
+        )),
+    );
+
+    const corrected = state.specs.map((spec) => {
+        const height = correctedHeights.get(createSpecKey(spec));
+
+        return height === undefined ? spec : { ...spec, height };
+    });
+
+    return commitSpecs(view, corrected, state.sourceSignature);
+}
+
+/**
+ * Publishes spacer specs when they differ from what is already rendered.
+ *
+ * @param view - Active editor view.
+ * @param specs - Spacer specs to render.
+ * @param sourceSignature - Fingerprint of the measurement behind these specs.
+ * @returns True when a transaction was dispatched.
+ */
+function commitSpecs(
+    view: EditorView,
+    specs: PaginationSpacerSpec[],
+    sourceSignature: string,
+) {
     const signature = createSignature(specs);
+    const state = paginationPluginKey.getState(view.state);
 
-    if (signature === paginationPluginKey.getState(view.state)?.signature) {
-        return;
+    if (signature === state?.signature && sourceSignature === state?.sourceSignature) {
+        return false;
     }
 
-    const meta: PaginationMeta = { specs, signature };
+    const meta: PaginationMeta = { specs, signature, sourceSignature };
     view.dispatch(view.state.tr.setMeta(paginationPluginKey, meta).setMeta('addToHistory', false));
+
+    return true;
 }
 
 /**
@@ -241,7 +371,12 @@ export const PaginationExtension = Extension.create({
                 key: paginationPluginKey,
 
                 state: {
-                    init: () => ({ decorations: DecorationSet.empty, signature: '' }),
+                    init: () => ({
+                        decorations: DecorationSet.empty,
+                        signature: '',
+                        specs: [],
+                        sourceSignature: '',
+                    }),
                     apply: (tr, value, _oldState, newState) => {
                         const meta = tr.getMeta(paginationPluginKey) as PaginationMeta | undefined;
 
@@ -254,9 +389,10 @@ export const PaginationExtension = Extension.create({
                                         (view) => createTiptapPageSpacerElement(
                                             view.dom.ownerDocument,
                                             spec.height,
+                                            createSpecKey(spec),
                                         ),
                                         {
-                                            key: `${spec.kind}-${spec.pos}-${spec.height}`,
+                                            key: createSpecKey(spec),
                                             side: -1,
                                             ignoreSelection: true,
                                             marks: [],
@@ -264,6 +400,8 @@ export const PaginationExtension = Extension.create({
                                     )),
                                 ),
                                 signature: meta.signature,
+                                specs: meta.specs,
+                                sourceSignature: meta.sourceSignature,
                             };
                         }
 
@@ -275,6 +413,9 @@ export const PaginationExtension = Extension.create({
                         return {
                             decorations: value.decorations.map(tr.mapping, tr.doc),
                             signature: value.signature,
+                            specs: value.specs,
+                            // Edited content must be measured again from scratch.
+                            sourceSignature: '',
                         };
                     },
                 },
@@ -285,20 +426,43 @@ export const PaginationExtension = Extension.create({
 
                 view: (view) => {
                     let frame: number | null = null;
+                    let correctionFrame: number | null = null;
                     let timer: ReturnType<typeof setTimeout> | null = null;
 
                     const cancel = () => {
                         if (frame !== null) window.cancelAnimationFrame(frame);
+                        if (correctionFrame !== null) window.cancelAnimationFrame(correctionFrame);
                         if (timer !== null) clearTimeout(timer);
                         frame = null;
+                        correctionFrame = null;
                         timer = null;
+                    };
+
+                    // Corrections run after the browser has laid out the spacers
+                    // that were just committed, and stop as soon as they agree.
+                    const scheduleCorrection = (pass: number) => {
+                        if (pass >= MAX_CORRECTION_PASSES) {
+                            return;
+                        }
+
+                        correctionFrame = window.requestAnimationFrame(() => {
+                            correctionFrame = null;
+
+                            if (runCorrectionPass(view, storage.geometry)) {
+                                scheduleCorrection(pass + 1);
+                            }
+                        });
                     };
 
                     const schedule = (delay = 0) => {
                         cancel();
                         timer = setTimeout(() => {
                             frame = window.requestAnimationFrame(() => {
-                                runPaginationPass(view, storage.geometry);
+                                frame = null;
+
+                                if (runPaginationPass(view, storage.geometry)) {
+                                    scheduleCorrection(0);
+                                }
                             });
                         }, delay);
                     };
