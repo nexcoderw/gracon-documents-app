@@ -80,9 +80,12 @@ This application lets users create, organize, edit, share, sign, verify, and rev
 - Print preview owns a cleanup audit for stale export roots: temporary export hosts, readiness timers, and DOM refs must be cleared when saving finishes or the preview unmounts
 - Gracon-owned page break and pagination architecture is documented in `docs/gracon-owned-pagination-architecture.md`
 - Live editor pagination metrics now derive active page, page count, per-page ruler pages, and heading outline data from the rendered TipTap document without writing measurement state into document JSON
-- Live editor pagination now uses a shared page-geometry helper and temporary CSS offsets to keep whole blocks out of header/footer chrome when they would cross an automatic page seam
+- Live editor pagination uses one shared layout engine (`src/lib/tiptap/tiptap-page-layout-plan.ts`) for the editor and export clones, so page seams land in the same place on canvas, in print preview, and in the exported PDF
 - Live editor pages use a Google Docs-style gray gap between page surfaces, while PDF export keeps page gaps collapsed to preserve print geometry
-- Oversized blocks that cannot move as one whole printable unit are marked as render-only page overflow for future line-level pagination without mutating TipTap JSON
+- Text blocks split at line boundaries: a paragraph that no longer fits continues on the next page instead of running through the footer, page gap, and next header. Lists paginate per item; tables, images, and signature blocks still move as one unit
+- Live pagination spacers are ProseMirror widget decorations, so page layout never reaches autosave, copy/paste, DOCX export, or read-only rules; export clones receive the same spacers as inert DOM elements
+- Blocks that genuinely cannot be paginated — content taller than one printable page — are still marked as render-only overflow without mutating TipTap JSON
+- `Ctrl/Cmd+Enter` inserts a Google Docs-style page break at the cursor, splitting the block so the text after the cursor opens the new page
 - The editor includes a collapsible document outline generated from heading positions so long documents can be navigated before schema-backed page breaks are introduced
 - Insert-menu comment creation is wired through the existing comments drawer and selected-text anchors while comment history remains bounded and cursor-paginated
 - Page-break-before is now schema-backed on paragraph-like nodes, exposed through the insert menu, visible in formatting-mark mode, and preserved through live layout, PDF capture, DOCX export, and DOCX import
