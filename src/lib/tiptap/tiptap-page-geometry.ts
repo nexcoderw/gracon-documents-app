@@ -54,12 +54,6 @@ export interface TiptapPageRegion {
     printableBottom: number;
 }
 
-export interface TiptapPageBlockMeasurement {
-    top: number;
-    height: number;
-    forceNextPage?: boolean;
-}
-
 function normalizePositiveNumber(value: unknown, fallback: number) {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0
         ? Math.round(value)
@@ -162,76 +156,3 @@ export function getTiptapPageRegionAt(
         printableBottom: pageTop + geometry.printableBottom,
     };
 }
-
-/**
- * Calculates the CSS offset needed to start a block in the next printable page area.
- *
- * @param geometry - Normalized page geometry.
- * @param blockTop - Block top relative to the document root.
- * @param blockHeight - Rendered block height in CSS pixels.
- * @param forceNextPage - Whether this block has an explicit page-break-before.
- * @returns A non-negative offset in CSS pixels.
- */
-export function calculateTiptapPageBlockOffset(
-    geometry: TiptapPageGeometry,
-    blockTop: number,
-    blockHeight: number,
-    forceNextPage = false,
-) {
-    const current = getTiptapPageRegionAt(geometry, blockTop);
-    const blockBottom = blockTop + Math.max(0, blockHeight);
-    const startsInHeader = blockTop < current.printableTop;
-    const crossesFooter = blockBottom > current.printableBottom;
-
-    if (forceNextPage) {
-        const nextPrintableTop = current.pageTop + geometry.pagePitch + geometry.printableTop;
-        return Math.max(0, Math.ceil(nextPrintableTop - blockTop));
-    }
-
-    if (startsInHeader) {
-        return Math.max(0, Math.ceil(current.printableTop - blockTop));
-    }
-
-    if (crossesFooter && blockHeight <= geometry.printableHeight) {
-        const nextPrintableTop = current.pageTop + geometry.pagePitch + geometry.printableTop;
-        return Math.max(0, Math.ceil(nextPrintableTop - blockTop));
-    }
-
-    return 0;
-}
-
-/**
- * Returns whether a block is too tall to move as one whole printable block.
- *
- * @param geometry - Normalized page geometry.
- * @param blockHeight - Rendered block height in CSS pixels.
- * @returns Whether the block needs future line-level pagination.
- */
-export function isTiptapPageBlockOversized(
-    geometry: TiptapPageGeometry,
-    blockHeight: number,
-) {
-    return Math.max(0, blockHeight) > geometry.printableHeight;
-}
-
-/**
- * Returns whether an oversized block currently crosses the printable footer zone.
- *
- * @param geometry - Normalized page geometry.
- * @param blockTop - Block top relative to the document root.
- * @param blockHeight - Rendered block height in CSS pixels.
- * @returns Whether the block should be flagged for future line pagination.
- */
-export function isTiptapPageBlockOverflowing(
-    geometry: TiptapPageGeometry,
-    blockTop: number,
-    blockHeight: number,
-) {
-    if (!isTiptapPageBlockOversized(geometry, blockHeight)) {
-        return false;
-    }
-
-    const region = getTiptapPageRegionAt(geometry, blockTop);
-    return blockTop + Math.max(0, blockHeight) > region.printableBottom;
-}
-
