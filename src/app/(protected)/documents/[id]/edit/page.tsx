@@ -202,14 +202,6 @@ export default function EditDocumentPage() {
         () => buildDocumentLayoutStyle(documentLayout),
         [documentLayout],
     );
-    const livePageGeometry = useMemo(
-        () => ({
-            pageHeight: A4_PAPER_HEIGHT_PX,
-            pageGap: PAPER_PAGE_GAP_PX,
-            margins: documentLayout.margins,
-        }),
-        [documentLayout.margins],
-    );
     const measurePaginationMetrics = useCallback(() => {
         const editorEl = canvasRef.current?.querySelector<HTMLElement>('.ProseMirror');
         if (!editorEl) return;
@@ -1216,7 +1208,7 @@ export default function EditDocumentPage() {
                         showFormattingMarks={viewState.showFormattingMarks}
                         paperStyle={documentLayoutStyle}
                         headerFooter={documentLayout.headerFooter}
-                        pageGeometry={livePageGeometry}
+                        continuous
                         overlayContent={signatureStrip}
                         commentAnchors={commentAnchors}
                         onContentChange={handleContentChange}
