@@ -46,7 +46,6 @@ import {
     measureTiptapPagination,
     type TiptapOutlineMetric,
 } from '@/lib/tiptap/tiptap-page-metrics';
-import { applyTiptapPageLayoutOffsets } from '@/lib/tiptap/tiptap-page-breaks';
 import { createTiptapLivePageGeometry } from '@/lib/tiptap/tiptap-page-geometry';
 import styles from './EditDocumentPage.module.css';
 import {
@@ -203,15 +202,24 @@ export default function EditDocumentPage() {
         () => buildDocumentLayoutStyle(documentLayout),
         [documentLayout],
     );
+    const livePageGeometry = useMemo(
+        () => ({
+            pageHeight: A4_PAPER_HEIGHT_PX,
+            pageGap: PAPER_PAGE_GAP_PX,
+            margins: documentLayout.margins,
+        }),
+        [documentLayout.margins],
+    );
     const measurePaginationMetrics = useCallback(() => {
         const editorEl = canvasRef.current?.querySelector<HTMLElement>('.ProseMirror');
         if (!editorEl) return;
 
+        // Page layout itself is owned by the editor's pagination extension; this
+        // pass only reads the resulting geometry for page status and outline UI.
         const pageGeometry = createTiptapLivePageGeometry({
             pageHeight: A4_PAPER_HEIGHT_PX,
             margins: documentLayout.margins,
         });
-        applyTiptapPageLayoutOffsets(editorEl, pageGeometry);
         setPaginationMetrics(measureTiptapPagination(editorEl, {
             pageHeight: A4_PAPER_HEIGHT_PX,
             pageGap: PAPER_PAGE_GAP_PX,
@@ -1208,6 +1216,7 @@ export default function EditDocumentPage() {
                         showFormattingMarks={viewState.showFormattingMarks}
                         paperStyle={documentLayoutStyle}
                         headerFooter={documentLayout.headerFooter}
+                        pageGeometry={livePageGeometry}
                         overlayContent={signatureStrip}
                         commentAnchors={commentAnchors}
                         onContentChange={handleContentChange}
