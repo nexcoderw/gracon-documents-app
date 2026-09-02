@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 4002",
+    "dev": "next dev --webpack -p 4002",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -49,6 +49,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@next/swc-darwin-x64": "^16.3.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",

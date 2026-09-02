@@ -100,7 +100,7 @@
   }
 }
 
-@media print {
+/* @media print {
   @page {
     size: A4;
     margin: 0;
@@ -152,4 +152,4 @@
     transform: none !important;
     transform-origin: top left !important;
   }
-}
+} */
