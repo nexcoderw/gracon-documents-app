@@ -85,7 +85,8 @@ This application lets users create, organize, edit, share, sign, verify, and rev
 - Text blocks split at line boundaries: a paragraph that no longer fits continues on the next page instead of running through the footer, page gap, and next header. Lists paginate per item; tables, images, and signature blocks still move as one unit
 - Live pagination spacers are ProseMirror widget decorations, so page layout never reaches autosave, copy/paste, DOCX export, or read-only rules; export clones receive the same spacers as inert DOM elements
 - Page seams keep a safety margin above the footer and below the header (`PAPER_CONTENT_SAFETY_PX` / `--paper-content-safety`), so a break never leaves text flush against page chrome
-- Applied spacers are verified against the rendered result and corrected, so measurement error cannot leave a visible gap where a page resumes
+- Applied page offsets are verified against the absolute coordinate they were planned for, and corrected cumulatively in document order, so per-seam error cannot compound into a visible gap further down a long document
+- Tables paginate per row, so part of a table can sit on one page and the rest on the next; rows are offset by cell padding because a spacer between table rows would be pulled out of the table by the HTML parser
 - A page break on content that already starts a page adds no extra space
 - Blocks that genuinely cannot be paginated — content taller than one printable page — are still marked as render-only overflow without mutating TipTap JSON
 - `Ctrl/Cmd+Enter` inserts a Google Docs-style page break at the cursor, splitting the block so the text after the cursor opens the new page
