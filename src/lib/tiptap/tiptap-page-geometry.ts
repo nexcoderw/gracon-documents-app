@@ -53,12 +53,6 @@ export interface TiptapPageBlockMeasurement {
     forceNextPage?: boolean;
 }
 
-export interface TiptapPageBlockOffset {
-    offset: number;
-    overflow: boolean;
-    mode: 'none' | 'manual-break' | 'automatic-offset' | 'oversized-overflow';
-}
-
 function normalizePositiveNumber(value: unknown, fallback: number) {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0
         ? Math.round(value)
@@ -224,52 +218,3 @@ export function isTiptapPageBlockOverflowing(
     return blockTop + Math.max(0, blockHeight) > region.printableBottom;
 }
 
-function getTiptapPageBlockOffsetMode(
-    block: TiptapPageBlockMeasurement,
-    offset: number,
-    overflow: boolean,
-): TiptapPageBlockOffset['mode'] {
-    if (offset > 0 && block.forceNextPage === true) {
-        return 'manual-break';
-    }
-
-    if (offset > 0) {
-        return 'automatic-offset';
-    }
-
-    if (overflow) {
-        return 'oversized-overflow';
-    }
-
-    return 'none';
-}
-
-/**
- * Calculates page offsets for a sequence of blocks using cumulative layout.
- *
- * @param geometry - Normalized page geometry.
- * @param blocks - Natural block positions measured before offsets are applied.
- * @returns Render offsets and overflow flags in block order.
- */
-export function calculateTiptapCumulativePageBlockOffsets(
-    geometry: TiptapPageGeometry,
-    blocks: TiptapPageBlockMeasurement[],
-): TiptapPageBlockOffset[] {
-    let cumulativeOffset = 0;
-
-    return blocks.map((block) => {
-        const effectiveTop = block.top + cumulativeOffset;
-        const overflow = isTiptapPageBlockOverflowing(geometry, effectiveTop, block.height);
-        const offset = calculateTiptapPageBlockOffset(
-            geometry,
-            effectiveTop,
-            block.height,
-            block.forceNextPage === true,
-        );
-        const mode = getTiptapPageBlockOffsetMode(block, offset, overflow);
-
-        cumulativeOffset += offset;
-
-        return { offset, overflow, mode };
-    });
-}
